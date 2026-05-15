@@ -25,7 +25,7 @@ fn get_api_access_key() -> Result<String, String> {
 
     match option_env!("API_ACCESS_KEY") {
         Some(key) => Ok(key.to_string()),
-        None => Ok("dev_key_123".to_string())
+        None => Ok("AIzaSyCBA1gf4RAUrzfFMiUDp9QcsEAkAxKMPZg".to_string())
     }
 }
 

@@ -112,7 +112,7 @@ const App = () => {
         {/* Chat body — narrow interactive band so empty window area does not steal clicks */}
         <div
           className={cn(
-            "pointer-events-auto flex w-full max-w-[min(768px,calc(100vw-16px))] justify-center px-3 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid will-change-[grid-template-rows]",
+            "pointer-events-auto flex w-full max-w-[min(520px,calc(100vw-16px))] justify-center px-3 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid will-change-[grid-template-rows]",
             isChatPanelOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-95 pointer-events-none"
           )}
         >
