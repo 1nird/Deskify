@@ -1,8 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useWindowResize } from "./useWindow";
 import { useGlobalShortcuts } from "@/hooks";
-import { MAX_FILES, STORAGE_KEYS } from "@/config";
-import { useApp } from "@/contexts";
+import {
+  CREDITS_PER_MESSAGE,
+  ENABLE_CREDIT_SYSTEM,
+  MAX_FILES,
+  STORAGE_KEYS,
+} from "@/config";
+import { useApp, useAuth } from "@/contexts";
 import {
   fetchAIResponse,
   saveConversation,
@@ -10,6 +15,7 @@ import {
   generateConversationTitle,
   shouldUseDeskifyAPI,
   MESSAGE_ID_OFFSET,
+  deleteConversation,
   generateConversationId,
   generateMessageId,
   generateRequestId,
@@ -63,7 +69,10 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     systemPrompt,
     screenshotConfiguration,
     setScreenshotConfiguration,
+    credits,
+    setCredits,
   } = useApp();
+  const { } = useAuth();
   const globalShortcuts = useGlobalShortcuts();
 
   const [state, setState] = useState<CompletionState>({
@@ -128,6 +137,23 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     }));
   }, []);
 
+  const handleDeleteCurrentConversation = useCallback(async () => {
+    if (!state.currentConversationId) return;
+    try {
+      await deleteConversation(state.currentConversationId);
+      handleClearChat();
+      // Emit event so other windows (like dashboard) refresh
+      window.dispatchEvent(
+        new CustomEvent("conversationDeleted", {
+          detail: state.currentConversationId,
+        })
+      );
+    } catch (error) {
+      console.error("Failed to delete conversation:", error);
+      setState((prev) => ({ ...prev, error: "Failed to delete conversation" }));
+    }
+  }, [state.currentConversationId, handleClearChat]);
+
   const handleScrollChatUp = useCallback(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollBy({ top: -100, behavior: "smooth" });
@@ -189,10 +215,10 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
 
   const submit = useCallback(
     async (speechText?: string) => {
-      const input = speechText || state.input;
+      let input = speechText || state.input;
 
       if (!input.trim()) {
-        return;
+        input = "Analyze the screen and provide immediate assistance as my Deskify copilot. Focus on being maximally useful and providing clear, actionable next steps based on what is visible.";
       }
 
       if (speechText) {
@@ -200,6 +226,17 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
           ...prev,
           input: speechText,
         }));
+      }
+
+      const debitCredits =
+        ENABLE_CREDIT_SYSTEM;
+      if (debitCredits && credits < CREDITS_PER_MESSAGE) {
+        setState((prev) => ({
+          ...prev,
+          error:
+            "You're out of credits for this session. They refresh every 24 hours.",
+        }));
+        return;
       }
 
       // Generate unique request ID
@@ -368,6 +405,9 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
             fullResponse,
             allAttachedFiles
           );
+          if (debitCredits) {
+            setCredits(Math.max(0, credits - CREDITS_PER_MESSAGE));
+          }
           // Clear input and attached files after saving
           setState((prev) => ({
             ...prev,
@@ -393,6 +433,8 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
       allAiProviders,
       systemPrompt,
       state.conversationHistory,
+      credits,
+      setCredits,
     ]
   );
 
@@ -586,6 +628,18 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     };
 
     const handleStorageChange = async (e: StorageEvent) => {
+      if (e.key === "deskify-conversation-deleted" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          const { id } = data;
+          if (id === state.currentConversationId) {
+            startNewConversation();
+          }
+        } catch (error) {
+          console.error("Failed to parse conversation deletion:", error);
+        }
+      }
+
       if (e.key === "deskify-conversation-selected" && e.newValue) {
         try {
           const data = JSON.parse(e.newValue);
@@ -650,6 +704,16 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
 
       try {
         if (prompt) {
+          const debitCredits =
+            ENABLE_CREDIT_SYSTEM;
+          if (debitCredits && credits < CREDITS_PER_MESSAGE) {
+            setState((prev) => ({
+              ...prev,
+              error:
+                "You're out of credits for this session. They refresh every 24 hours.",
+            }));
+            return;
+          }
           // Auto mode: Submit directly to AI with screenshot
           const attachedFile: AttachedFile = {
             id: Date.now().toString(),
@@ -752,6 +816,9 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
               await saveCurrentConversation(userVisibleLabel, fullResponse, [
                 attachedFile,
               ]);
+              if (debitCredits) {
+                setCredits(Math.max(0, credits - CREDITS_PER_MESSAGE));
+              }
               // Clear input after saving
               setState((prev) => ({
                 ...prev,
@@ -807,6 +874,8 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
       systemPrompt,
       saveCurrentConversation,
       inputRef,
+      credits,
+      setCredits,
     ]
   );
 
@@ -868,7 +937,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     isChatPanelExpanded &&
     (isPopoverOpen || micOpen || messageHistoryOpen || isFilesPopoverOpen);
 
-  const collapsedWindowHeight = !isChatPanelExpanded ? 120 : 380;
+  const collapsedWindowHeight = !isChatPanelExpanded ? 745 : 745;
 
   useEffect(() => {
     resizeWindow(popoverChromeExpanded, collapsedWindowHeight);
@@ -1127,6 +1196,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     conversationHistory: state.conversationHistory,
     loadConversation,
     startNewConversation,
+    handleDeleteCurrentConversation,
     messageHistoryOpen,
     setMessageHistoryOpen,
     screenshotConfiguration,

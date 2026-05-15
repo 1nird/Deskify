@@ -1,6 +1,7 @@
 import {
   AI_PROVIDERS,
   DEFAULT_SYSTEM_PROMPT,
+  REFRESH_INTERVAL_MS,
   SCREENSHOT_AUTO_PROMPT_DEFAULT,
   STORAGE_KEYS,
 } from "@/config";
@@ -16,7 +17,12 @@ import {
   CursorType,
   updateCursorType,
 } from "@/lib/storage";
-import { IContextType, ScreenshotConfig, TYPE_PROVIDER } from "@/types";
+import {
+  AppUserProfile,
+  IContextType,
+  ScreenshotConfig,
+  TYPE_PROVIDER,
+} from "@/types";
 import curl2Json from "@bany/curl-to-json";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -59,6 +65,25 @@ const validateAndProcessCurlProviders = (
   }
 };
 
+function parseStoredUser(raw: string | null): AppUserProfile | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const p = parsed as Record<string, unknown>;
+    const email = p.email != null ? String(p.email).trim() : "";
+    const name = p.name != null ? String(p.name).trim() : "";
+    if (!email) return null;
+    const picture =
+      typeof p.picture === "string" && p.picture.trim() !== ""
+        ? p.picture.trim()
+        : undefined;
+    return { email, name: name || email, ...(picture ? { picture } : {}) };
+  } catch {
+    return null;
+  }
+}
+
 // Create the context
 const AppContext = createContext<IContextType | undefined>(undefined);
 
@@ -66,7 +91,7 @@ const AppContext = createContext<IContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [systemPrompt, setSystemPrompt] = useState<string>(
     safeLocalStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) ||
-      DEFAULT_SYSTEM_PROMPT
+    DEFAULT_SYSTEM_PROMPT
   );
 
   // AI Providers
@@ -82,7 +107,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.provider) return parsed;
-      } catch (e) {}
+      } catch (e) { }
     }
     return {
       provider: "gemini",
@@ -115,6 +140,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const stored = safeLocalStorage.getItem(STORAGE_KEYS.DASHBOARD_ON_LAUNCH);
     return stored === null ? true : stored === "true";
   });
+
+  const [credits, setCredits] = useState<number>(() => {
+    const stored = safeLocalStorage.getItem(STORAGE_KEYS.CREDITS);
+    if (stored == null) return 0;
+    const n = parseInt(stored, 10);
+    return Number.isNaN(n) ? 0 : n;
+  });
+
+  const [lastRefresh, setLastRefresh] = useState<number>(() => {
+    const stored = safeLocalStorage.getItem(STORAGE_KEYS.LAST_REFRESH);
+    if (stored == null) return 0;
+    const n = parseInt(stored, 10);
+    return Number.isNaN(n) ? 0 : n;
+  });
+
+  const [user, setUser] = useState<AppUserProfile | null>(() =>
+    parseStoredUser(safeLocalStorage.getItem(STORAGE_KEYS.USER))
+  );
+
+  useEffect(() => {
+    safeLocalStorage.setItem(STORAGE_KEYS.CREDITS, String(credits));
+  }, [credits]);
+
+  useEffect(() => {
+    safeLocalStorage.setItem(STORAGE_KEYS.LAST_REFRESH, String(lastRefresh));
+  }, [lastRefresh]);
+
+  useEffect(() => {
+    if (user === null) {
+      safeLocalStorage.removeItem(STORAGE_KEYS.USER);
+      return;
+    }
+    safeLocalStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  }, [user]);
 
   // Wrapper to sync supportsImages to localStorage
   const setSupportsImages = (value: boolean) => {
@@ -169,7 +228,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     // Apply content protection based on saved cursor type
     const isProtected = (customizableState.cursor.type || "auto") === "invisible";
-    invoke("set_content_protected", { protected: isProtected }).catch(() => {});
+    invoke("set_content_protected", { protected: isProtected }).catch(() => { });
 
     const stored = safeLocalStorage.getItem(STORAGE_KEYS.CUSTOMIZABLE);
     if (!stored) {
@@ -223,8 +282,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         console.debug("Failed to track app start:", error);
       }
     };
+
+    const checkCreditRefresh = () => {
+      const authRaw = safeLocalStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+      if (!authRaw) return;
+      try {
+        const parsed = JSON.parse(authRaw) as {
+          mode?: string;
+          googleProfile?: unknown;
+        };
+        if (parsed.mode !== "google") return;
+        const lastRaw = safeLocalStorage.getItem(STORAGE_KEYS.LAST_REFRESH);
+        const last = lastRaw != null ? parseInt(lastRaw, 10) : 0;
+        const lastSafe = Number.isNaN(last) ? 0 : last;
+        const now = Date.now();
+        if (now - lastSafe < REFRESH_INTERVAL_MS) return;
+        
+        // Since credit system is disabled (ENABLE_CREDIT_SYSTEM = false), 
+        // we just reset to 0 or some base value if ever enabled.
+        setCredits(0);
+        setLastRefresh(now);
+      } catch {
+        /* ignore */
+      }
+    };
+
     loadData();
-    initializeApp();
+    checkCreditRefresh();
+    void initializeApp();
 
     // Force migration to Gemini API or ensure Gemini has the correct key
     const stored = safeLocalStorage.getItem(STORAGE_KEYS.SELECTED_AI_PROVIDER);
@@ -240,7 +325,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             }
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }, []);
 
@@ -272,7 +357,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (!autostartInitialized) {
-          const autostartEnabled = customizable?.autostart?.isEnabled ?? true;
+          const autostartEnabled = customizable?.autostart?.isEnabled ?? false;
 
           if (autostartEnabled) {
             await enable();
@@ -319,6 +404,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.SUPPORTS_IMAGES && e.newValue !== null) {
         setSupportsImagesState(e.newValue === "true");
+      }
+
+      if (e.key === STORAGE_KEYS.CREDITS && e.newValue !== null) {
+        const n = parseInt(e.newValue, 10);
+        if (!Number.isNaN(n)) setCredits(n);
+      }
+      if (e.key === STORAGE_KEYS.LAST_REFRESH && e.newValue !== null) {
+        const n = parseInt(e.newValue, 10);
+        if (!Number.isNaN(n)) setLastRefresh(n);
+      }
+      if (e.key === STORAGE_KEYS.USER) {
+        setUser(parseStoredUser(e.newValue));
       }
 
       if (
@@ -465,6 +562,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSupportsImages,
     showDashboardOnLaunch,
     setShowDashboardOnLaunch,
+    credits,
+    setCredits,
+    lastRefresh,
+    setLastRefresh,
+    user,
+    setUser,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

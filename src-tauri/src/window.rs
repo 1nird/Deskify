@@ -67,8 +67,15 @@ pub fn center_window_completely(window: &WebviewWindow) -> Result<(), Box<dyn st
 pub fn set_window_height(window: tauri::WebviewWindow, height: u32) -> Result<(), String> {
     use tauri::{LogicalSize, Size};
 
-    // Simply set the window size with fixed width and new height
-    let new_size = LogicalSize::new(650.0, height as f64);
+    // Resizing clears maximize/fullscreen on Windows; skip while user has expanded the window.
+    if window.is_maximized().unwrap_or(false) {
+        return Ok(());
+    }
+    if window.is_fullscreen().unwrap_or(false) {
+        return Ok(());
+    }
+
+    let new_size = LogicalSize::new(995.0, height as f64);
     window
         .set_size(Size::Logical(new_size))
         .map_err(|e| format!("Failed to resize window: {}", e))?;
@@ -176,9 +183,13 @@ pub fn create_dashboard_window<R: Runtime>(
     let base_builder = base_builder
         .title("Deskify - Dashboard")
         .center()
-        .decorations(true)
-        .inner_size(800.0, 600.0)
-        .min_inner_size(800.0, 600.0)
+        .decorations(false)
+        .transparent(true)
+        // Avoid DWM drop-shadow halo / faint frame around frameless transparent windows on Windows.
+        .shadow(false)
+        .resizable(true)
+        .inner_size(995.0, 745.0)
+        .min_inner_size(800.0, 560.0)
         .content_protected(true)
         .visible(false);
 

@@ -50,10 +50,14 @@ jobs:
 
       - name: Create environment file
         run: |
-          echo "API_ACCESS_KEY=${{ secrets.API_ACCESS_KEY }}" > src-tauri/.env
-          echo "PAYMENT_ENDPOINT=${{ secrets.PAYMENT_ENDPOINT }}" >> src-tauri/.env
-          echo "APP_ENDPOINT=${{ secrets.APP_ENDPOINT }}" >> src-tauri/.env
-          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> src-tauri/.env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" > .env
+          echo "VITE_GOOGLE_REDIRECT_URI=${{ secrets.VITE_GOOGLE_REDIRECT_URI }}" >> .env
+          echo "API_ACCESS_KEY=${{ secrets.API_ACCESS_KEY }}" >> .env
+          echo "PAYMENT_ENDPOINT=${{ secrets.PAYMENT_ENDPOINT }}" >> .env
+          echo "APP_ENDPOINT=${{ secrets.APP_ENDPOINT }}" >> .env
+          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+          # Also copy to src-tauri if needed by rust
+          cp .env src-tauri/.env
 
       - name: Install frontend deps
         run: npm ci
@@ -64,14 +68,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_REDIRECT_URI: ${{ secrets.VITE_GOOGLE_REDIRECT_URI }}
           API_ACCESS_KEY: ${{ secrets.API_ACCESS_KEY }}
           PAYMENT_ENDPOINT: ${{ secrets.PAYMENT_ENDPOINT }}
           APP_ENDPOINT: ${{ secrets.APP_ENDPOINT }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         with:
           tagName: app-v__VERSION__
-          releaseName: "Pluely v__VERSION__"
-          releaseBody: "Download binaries for your OS. macOS users: If blocked, go to System Settings > Privacy & Security > Security section, find 'pluely was blocked' message, click 'Allow Anyway', then reopen the app."
+          releaseName: "Deskify v__VERSION__"
+          releaseBody: "Download binaries for your OS. macOS users: If blocked, go to System Settings > Privacy & Security > Security section, find 'deskify was blocked' message, click 'Allow Anyway', then reopen the app."
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true

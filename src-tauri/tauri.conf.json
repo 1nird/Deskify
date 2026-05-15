@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Deskify",
-  "version": "0.1.4",
-  "identifier": "com.deskify.app",
+  "version": "2.0.0",
+  "identifier": "com.deskify.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -15,8 +15,8 @@
       {
         "label": "main",
         "title": "Deskify - AI Assistant",
-        "width": 650,
-        "height": 120,
+        "width": 995,
+        "height": 745,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
@@ -35,7 +35,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -45,11 +45,18 @@
       "icons/icon.ico"
     ],
     "resources": ["info.plist", "deskify.desktop"],
-    "macOS": { "minimumSystemVersion": "10.13" }
+    "macOS": { "minimumSystemVersion": "10.13" },
+    "windows": {
+    }
   },
   "plugins": {
     "sql": {
       "preload": ["sqlite:deskify.db"]
+    },
+    "updater": {
+      "active": true,
+      "endpoints": ["https://deskify.site/update/latest.json"],
+      "pubkey": "deskify.key.pub"
     }
   }
 }

@@ -8,7 +8,7 @@ export async function* fetchAIResponse(params: {
   selectedProvider?: any;
   allAiProviders?: any[];
   systemPrompt?: string;
-  history?: Message[];
+  history?: Message[];  
   userMessage: string;
   imagesBase64?: string[];
   signal?: AbortSignal;

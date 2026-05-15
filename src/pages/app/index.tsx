@@ -12,7 +12,10 @@ import { cn } from "@/lib/utils";
 
 const App = () => {
   const { isHidden } = useApp();
-  const { customizable, showDashboardOnLaunch, setCursorType } = useAppContext();
+  const {
+    customizable,
+    setCursorType,
+  } = useAppContext();
   const platform = getPlatform();
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(true);
 
@@ -26,13 +29,8 @@ const App = () => {
 
   const toggleChatPanel = () => setIsChatPanelOpen((v) => !v);
 
-  useEffect(() => {
-    if (!showDashboardOnLaunch) return;
-    const timer = setTimeout(() => {
-      void openDashboard();
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [showDashboardOnLaunch]);
+  // Removed automatic dashboard launch on startup to prevent white screen flashes.
+  // Dashboard can still be opened via the tray icon or the dashboard button in the header.
 
   useEffect(() => {
     const handleExpand = () => setIsChatPanelOpen(true);
@@ -52,14 +50,14 @@ const App = () => {
     >
       <div
         className={cn(
-          "w-screen h-screen flex flex-col overflow-hidden items-center pt-2 gap-2 transition-opacity duration-200",
+          "w-screen h-screen flex flex-col overflow-hidden items-center pt-2 gap-2 transition-opacity duration-200 pointer-events-none",
           isHidden && "hidden"
         )}
       >
-        {/* Top bar — stays visible when chat is collapsed */}
+        {/* Top bar — shrink hitbox to content; gaps pass clicks through to apps below */}
         <div
           data-tauri-drag-region
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-3xl border border-emerald-500/20 bg-black/20 backdrop-blur-xl shadow-lg hover:bg-black/40 hover:border-emerald-500/40 hover:shadow-emerald-500/10 transition-all duration-300 cursor-move select-none z-50 group"
+          className="pointer-events-auto self-center flex w-max max-w-[min(100%,calc(100vw-16px))] items-center gap-1.5 px-3 py-1.5 rounded-3xl border border-emerald-500/20 bg-black/20 backdrop-blur-xl shadow-lg hover:bg-black/40 hover:border-emerald-500/40 hover:shadow-emerald-500/10 transition-all duration-300 cursor-move select-none z-50 group"
         >
           <div
             className="flex items-center justify-center rounded-xl outline-none opacity-80 group-hover:opacity-100 transition-opacity"
@@ -111,11 +109,11 @@ const App = () => {
           </div>
         </div>
 
-        {/* Chat body — dropdown-style reveal */}
+        {/* Chat body — narrow interactive band so empty window area does not steal clicks */}
         <div
           className={cn(
-            "w-full flex justify-center px-3 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid will-change-[grid-template-rows]",
-            isChatPanelOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-95"
+            "pointer-events-auto flex w-full max-w-[min(768px,calc(100vw-16px))] justify-center px-3 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid will-change-[grid-template-rows]",
+            isChatPanelOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-95 pointer-events-none"
           )}
         >
           <div
@@ -124,7 +122,7 @@ const App = () => {
               !isChatPanelOpen && "pointer-events-none select-none"
             )}
           >
-            <Card className="w-full max-w-[calc(100%-8px)] flex flex-col gap-2 p-2 border border-emerald-500/20 hover:border-emerald-500/40 shadow-xl bg-black/40 hover:bg-black/50 backdrop-blur-2xl rounded-3xl transition-all duration-300">
+            <Card className="pointer-events-auto w-full max-w-[calc(100%-8px)] flex flex-col gap-2 p-2 border border-emerald-500/20 hover:border-emerald-500/40 shadow-xl bg-black/40 hover:bg-black/50 backdrop-blur-2xl rounded-3xl transition-all duration-300">
               <Completion isHidden={isHidden} isChatPanelExpanded={isChatPanelOpen} />
             </Card>
           </div>

@@ -27,19 +27,53 @@
 
 This is the **open source version** of the $15M company [Cluely](https://cluely.com/) 🎯. Experience the same powerful real-time AI assistance, but with complete transparency, privacy, and customization control.
 
-## 📥 **Download Pluely**
+## 📥 **Download Deskify**
 
 <div align="center">
 
 ### 🚀 **Get the Latest Release**
 
-[![Download for macOS](https://img.shields.io/badge/Download%20for-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://pluely.com/download/macos) &nbsp; [![Download for Linux](https://img.shields.io/badge/Download%20for-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://pluely.com/download/linux) &nbsp; [![Download for Windows](https://img.shields.io/badge/Download%20for-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://pluely.com/download/windows)
+[![Download for macOS](https://img.shields.io/badge/Download%20for-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/deskify/deskify/releases/latest) &nbsp; [![Download for Linux](https://img.shields.io/badge/Download%20for-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/deskify/deskify/releases/latest) &nbsp; [![Download for Windows](https://img.shields.io/badge/Download%20for-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/deskify/deskify/releases/latest)
 
-[![GitHub Release](https://img.shields.io/github/v/release/iamsrikanthnani/pluely?style=for-the-badge&logo=github&label=Latest%20Version)](https://pluely.com/releases) &nbsp; [![GitHub Downloads](https://img.shields.io/github/downloads/iamsrikanthnani/pluely/total?style=for-the-badge&logo=github&label=Total%20Downloads)](https://pluely.com/downloads)
+[![GitHub Release](https://img.shields.io/github/v/release/deskify/deskify?style=for-the-badge&logo=github&label=Latest%20Version)](https://github.com/deskify/deskify/releases/latest) &nbsp; [![GitHub Downloads](https://img.shields.io/github/downloads/deskify/deskify/total?style=for-the-badge&logo=github&label=Total%20Downloads)](https://github.com/deskify/deskify/releases)
 
 **Available formats:** `.dmg` (macOS) • `.msi` (Windows) • `.exe` (Windows) • `.deb` (Linux) • `.rpm` (Linux) • `.AppImage` (Linux)
 
 </div>
+
+### 📦 **Installation Instructions**
+
+#### **macOS**
+1. Download the `.dmg` file from the [latest release](https://github.com/deskify/deskify/releases/latest)
+2. Open the downloaded `.dmg` file
+3. Drag Deskify to your Applications folder
+4. **First launch**: Go to System Settings > Privacy & Security, find "Deskify was blocked", click "Allow Anyway", then reopen the app
+5. Grant necessary permissions (microphone, screen recording, accessibility) when prompted
+
+#### **Linux (Debian/Ubuntu)**
+```bash
+# Download .deb file from latest release
+sudo dpkg -i deskify_2.0.0_amd64.deb
+sudo apt-get install -f  # Fix any missing dependencies
+```
+
+#### **Linux (Fedora/RHEL)**
+```bash
+# Download .rpm file from latest release
+sudo rpm -i deskify-2.0.0.x86_64.rpm
+```
+
+#### **Linux (AppImage - Universal)**
+```bash
+# Download .AppImage file from latest release
+chmod +x deskify-2.0.0-x86_64.AppImage
+./deskify-2.0.0-x86_64.AppImage
+```
+
+#### **Windows**
+1. Download the `.exe` or `.msi` installer from the [latest release](https://github.com/deskify/deskify/releases/latest)
+2. Run the installer and follow the setup wizard
+3. Launch Deskify from the Start menu or desktop shortcut
 
 ---
 

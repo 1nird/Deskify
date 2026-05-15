@@ -1,6 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useApp } from "@/contexts";
-import { MAX_FILES } from "@/config";
+import { useApp, useAuth } from "@/contexts";
+import {
+  CREDITS_PER_MESSAGE,
+  ENABLE_CREDIT_SYSTEM,
+  MAX_FILES,
+} from "@/config";
 import {
   fetchAIResponse,
   saveConversation,
@@ -59,7 +63,10 @@ export const useChatCompletion = (
     systemPrompt,
     screenshotConfiguration,
     setScreenshotConfiguration,
+    credits,
+    setCredits,
   } = useApp();
+  const { } = useAuth();
 
   const [state, setState] = useState<ChatCompletionState>({
     input: "",
@@ -140,6 +147,16 @@ export const useChatCompletion = (
           ...prev,
           input: speechText,
         }));
+      }
+
+      const debitCredits = ENABLE_CREDIT_SYSTEM;
+      if (debitCredits && credits < CREDITS_PER_MESSAGE) {
+        setState((prev) => ({
+          ...prev,
+          error:
+            "You're out of credits for this session. They refresh every 24 hours.",
+        }));
+        return;
       }
 
       // Generate unique request ID
@@ -360,6 +377,9 @@ export const useChatCompletion = (
 
           try {
             await saveConversation(conversation);
+            if (debitCredits) {
+              setCredits(Math.max(0, credits - CREDITS_PER_MESSAGE));
+            }
 
             // Reload conversation from database to ensure consistency
             const updatedConversation = await getConversationById(
@@ -396,6 +416,8 @@ export const useChatCompletion = (
       messages,
       conversationId,
       setMessages,
+      credits,
+      setCredits,
     ]
   );
 

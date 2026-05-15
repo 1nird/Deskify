@@ -16,8 +16,7 @@ import { getResponseSettings, RESPONSE_LENGTHS, LANGUAGES } from "@/lib";
 
 const GOOGLE_API_KEY = "AIzaSyDTQrsnOv8F3gi5DyrV0_mvr04PncMlM70";
 const TARGET_MODEL = "gemini-2.5-flash-lite";
-const GOOGLE_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-const RESPONSE_CONTENT_PATH = "choices[0].delta.content";
+const RESPONSE_CONTENT_PATH = "candidates[0].content.parts[0].text";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -58,13 +57,13 @@ async function tryRequest(
   signal?: AbortSignal
 ): Promise<Response> {
   const fetchFn = tauriFetch as unknown as typeof fetch;
-  const response = await fetchFn(GOOGLE_API_URL, {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  const response = await fetchFn(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ ...body, model, stream: true }),
+    body: JSON.stringify(body),
     signal,
   });
 
@@ -91,25 +90,49 @@ export async function* fetchManagedAIResponse(
 
   const enhancedPrompt = buildEnhancedSystemPrompt(systemPrompt);
 
-  const messages: any[] = [{ role: "system", content: enhancedPrompt }];
+  const contents: any[] = [];
 
+  // History mapping (Native Gemini role names)
   for (const msg of history) {
-    messages.push({ role: msg.role, content: msg.content });
-  }
-
-  const userContentParts: any[] = [{ type: "text", text: userMessage }];
-  for (const img of imagesBase64) {
-    userContentParts.push({
-      type: "image_url",
-      image_url: { url: `data:image/png;base64,${img}` },
+    contents.push({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }]
     });
   }
-  messages.push({
+
+  // Current user content
+  const userParts: any[] = [{ text: userMessage }];
+  for (const img of imagesBase64) {
+    userParts.push({
+      inline_data: {
+        mime_type: "image/png",
+        data: img
+      }
+    });
+  }
+  contents.push({
     role: "user",
-    content: imagesBase64.length > 0 ? userContentParts : userMessage,
+    parts: userParts
   });
 
-  const baseBody = { messages, max_tokens: 1024, temperature: 0.1, top_p: 0.9 };
+  const baseBody = {
+    contents,
+    system_instruction: {
+      parts: [{ text: enhancedPrompt }]
+    },
+    safetySettings: [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_CIVIC_INTEGRITY", threshold: "BLOCK_NONE" }
+    ],
+    generationConfig: {
+      temperature: 0.8,
+      topP: 0.95,
+      maxOutputTokens: 2048
+    }
+  };
   let lastError: Error | null = null;
 
   if (signal?.aborted) return;

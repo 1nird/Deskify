@@ -1,16 +1,42 @@
 import { useEffect, useState } from "react";
 import { useTitles } from "@/hooks";
+import { check } from "@tauri-apps/plugin-updater";
 import { listen } from "@tauri-apps/api/event";
 import { safeLocalStorage, migrateLocalStorageToSQLite } from "@/lib";
 import { getShortcutsConfig } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
 
 export const useApp = () => {
-
   const [isHidden, setIsHidden] = useState(false);
   // Initialize title management
   useTitles();
 
+  const [updateAvailable, setUpdateAvailable] = useState<any>(null);
+
+  // Auto-update check on app launch
+  useEffect(() => {
+    const checkForUpdate = async () => {
+      try {
+        const update = await check();
+        if (update) {
+          setUpdateAvailable(update);
+        }
+      } catch (e) {
+        console.error("Update check failed:", e);
+      }
+    };
+    checkForUpdate();
+  }, []);
+
+  const applyUpdate = async () => {
+    if (updateAvailable) {
+      try {
+        await updateAvailable.downloadAndInstall();
+      } catch (e) {
+        console.error("Update installation failed:", e);
+      }
+    }
+  };
   // Initialize shortcuts from localStorage on app startup
   useEffect(() => {
     const initializeShortcuts = async () => {
@@ -101,7 +127,7 @@ export const useApp = () => {
     );
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenPromise.then((unlistenFn) => unlistenFn());
     };
   }, []);
 
@@ -149,7 +175,8 @@ export const useApp = () => {
 
   return {
     isHidden,
-    setIsHidden,
+    updateAvailable,
+    applyUpdate,
     handleSelectConversation,
     handleNewConversation,
   };

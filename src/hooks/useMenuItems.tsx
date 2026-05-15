@@ -11,7 +11,7 @@ import {
   BugIcon,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { XIcon, GithubIcon } from "@/components";
+import { GithubIcon, InstagramIcon, TikTokIcon } from "@/components";
 
 export const useMenuItems = () => {
   const menu: {
@@ -53,7 +53,7 @@ export const useMenuItems = () => {
     {
       icon: MailIcon,
       label: "Contact Support",
-      href: "mailto:support@deskify.app",
+      href: "mailto:support@deskify.site",
     },
     {
       icon: BugIcon,
@@ -77,7 +77,7 @@ export const useMenuItems = () => {
     {
       title: "Website",
       icon: GlobeIcon,
-      link: "https://deskify.app",
+      link: "https://deskify.site/",
     },
     {
       title: "Github",
@@ -85,9 +85,14 @@ export const useMenuItems = () => {
       link: "https://github.com/deskify/deskify",
     },
     {
-      title: "Follow on X",
-      icon: XIcon,
-      link: "https://x.com/deskifyapp",
+      title: "TikTok",
+      icon: TikTokIcon,
+      link: "https://www.tiktok.com/@deskify_official",
+    },
+    {
+      title: "Instagram",
+      icon: InstagramIcon,
+      link: "https://www.instagram.com/deskify_verified/",
     },
   ];
 

@@ -1,7 +1,7 @@
 import { Badge, Input, Card, Empty, Button } from "@/components";
 import { useHistory } from "@/hooks";
 import { PageLayout } from "@/layouts";
-import { MessageCircleIcon, Search } from "lucide-react";
+import { MessageCircleIcon, Search, Trash2, X } from "lucide-react";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 
@@ -96,12 +96,52 @@ const Dashboard = () => {
                             {doc.title}
                           </p>
                           <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="text-xs">
-                              {doc.messages.length} messages
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {moment(doc.updatedAt).format("hh:mm A")}
-                            </Badge>
+                            {conversations.deleteConfirm === doc.id ? (
+                              <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    conversations.confirmDelete();
+                                  }}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 h-7 w-7 text-muted-foreground hover:bg-white/5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    conversations.cancelDelete();
+                                  }}
+                                >
+                                  <X className="size-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    conversations.handleDeleteConfirm(doc.id);
+                                  }}
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                                <Badge variant="outline" className="text-xs">
+                                  {doc.messages.length} messages
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {moment(doc.updatedAt).format("hh:mm A")}
+                                </Badge>
+                              </>
+                            )}
                           </div>
                         </div>
                       </Card>

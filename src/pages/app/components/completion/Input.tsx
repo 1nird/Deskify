@@ -21,6 +21,7 @@ export const Input = ({
   currentConversationId,
   conversationHistory,
   startNewConversation,
+  handleDeleteCurrentConversation,
   messageHistoryOpen,
   setMessageHistoryOpen,
   inputRef,
@@ -75,6 +76,7 @@ export const Input = ({
               conversationHistory={conversationHistory}
               currentConversationId={currentConversationId}
               onStartNewConversation={startNewConversation}
+              onDeleteConversation={handleDeleteCurrentConversation}
               messageHistoryOpen={messageHistoryOpen}
               setMessageHistoryOpen={setMessageHistoryOpen}
               isChatPanelExpanded={isChatPanelExpanded}

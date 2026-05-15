@@ -6,8 +6,10 @@
   "platforms": ["windows", "linux"],
   "permissions": [
     "core:default",
+    "core:window:default",
     "opener:default",
     "updater:default",
+    "process:allow-restart",
     "keychain:default",
     "keychain:allow-get-item",
     "keychain:allow-save-item",
@@ -17,6 +19,10 @@
     "global-shortcut:allow-unregister",
     "shell:allow-open",
     "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
     "sql:default",
     "sql:allow-execute",
     "posthog:default",
@@ -24,6 +30,8 @@
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
+    "oauth:default",
+    "oauth:allow-start",
     {
       "identifier": "http:default",
       "allow": [{ "url": "http://**" }, { "url": "https://**" }]

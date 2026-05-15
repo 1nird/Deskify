@@ -1075,7 +1075,7 @@ dependencies = [
 
 [[package]]
 name = "deskify"
-version = "0.1.1"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -1096,9 +1096,12 @@ dependencies = [
  "tauri-plugin-keychain",
  "tauri-plugin-machine-uid",
  "tauri-plugin-macos-permissions",
+ "tauri-plugin-oauth",
  "tauri-plugin-opener",
  "tauri-plugin-posthog",
+ "tauri-plugin-process",
  "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
  "tauri-plugin-sql",
  "tauri-plugin-updater",
  "tokio",
@@ -5989,6 +5992,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-oauth"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eda564acdb23185caf700f89dd6e5d4540225d6a991516b2cad0cbcf27e4dcd3"
+dependencies = [
+ "httparse",
+ "log",
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
+ "url",
+]
+
+[[package]]
 name = "tauri-plugin-opener"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6029,6 +6047,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-process"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d55511a7bf6cd70c8767b02c97bf8134fa434daf3926cfc1be0a0f94132d165a"
+dependencies = [
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
 name = "tauri-plugin-shell"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6047,6 +6075,21 @@ dependencies = [
  "tauri-plugin",
  "thiserror 2.0.14",
  "tokio",
+]
+
+[[package]]
+name = "tauri-plugin-single-instance"
+version = "2.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd707f8c86b4e3004e2c141fa24351f1909ba40ce1b8437e30d5ed5277dd3710"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror 2.0.14",
+ "tracing",
+ "windows-sys 0.60.2",
+ "zbus",
 ]
 
 [[package]]

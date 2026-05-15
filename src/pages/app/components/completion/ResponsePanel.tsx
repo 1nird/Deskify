@@ -1,29 +1,8 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect } from "react";
 import { Loader2, MonitorIcon, XIcon } from "lucide-react";
 import { ScrollArea, Button, Markdown, CopyButton } from "@/components";
 import { UseCompletionReturn } from "@/types";
 import { cn } from "@/lib/utils";
-import {
-  formatShortcutKeyForDisplay,
-  getShortcutsConfig,
-} from "@/lib/storage";
-
-function buildShortcutTipsLine(): string {
-  const cfg = getShortcutsConfig();
-  const parts: string[] = [];
-  const add = (label: string, actionId: string) => {
-    const b = cfg.bindings[actionId];
-    if (b?.enabled && b.key?.trim()) {
-      parts.push(`${label}: ${formatShortcutKeyForDisplay(b.key)}`);
-    }
-  };
-  add("Hide/show", "toggle_window");
-  add("Clear chat", "clear_chat");
-  add("Screen ask", "focus_input");
-  add("Screenshot", "screenshot");
-  add("Dashboard", "toggle_dashboard");
-  return parts.join(" · ");
-}
 
 export const ResponsePanel = ({
   isLoading,
@@ -37,7 +16,6 @@ export const ResponsePanel = ({
   screenshotSent,
 }: UseCompletionReturn) => {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const shortcutTips = useMemo(() => buildShortcutTipsLine(), []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,15 +51,6 @@ export const ResponsePanel = ({
           </Button>
         </div>
       </div>
-
-      {isLoading && shortcutTips ? (
-        <div className="px-3 py-2 border-b border-emerald-500/15 bg-black/35">
-          <p className="text-[10px] text-emerald-300/90 leading-snug">
-            <span className="font-semibold text-emerald-400">Shortcuts · </span>
-            {shortcutTips}
-          </p>
-        </div>
-      ) : null}
 
       {/* Scrollable messages */}
       <ScrollArea ref={scrollAreaRef} className="h-[420px]">

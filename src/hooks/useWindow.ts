@@ -3,7 +3,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef } from "react";
 
 /** Last non-overlay height so drag/mutation shrink uses the correct idle size */
-export const windowIdleHeightRef = { current: 120 as number };
+export const windowIdleHeightRef = { current: 745 as number };
 
 // Helper function to check if any popover is open in the DOM
 const isAnyPopoverOpen = (): boolean => {

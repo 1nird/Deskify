@@ -13,7 +13,7 @@ interface MarkdownRendererProps {
 
 export function Markdown({ children }: MarkdownRendererProps) {
   return (
-    <div className="markdown-body">
+    <div className="markdown-body break-words">
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: true }]]}

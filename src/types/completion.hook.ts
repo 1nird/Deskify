@@ -78,6 +78,8 @@ export interface UseCompletionReturn {
   loadConversation: (conversation: any) => void;
   /** Function to start a new conversation (clears current state) */
   startNewConversation: () => void;
+  /** Function to delete the current active conversation */
+  handleDeleteCurrentConversation: () => Promise<void>;
 
   // UI state management
   /** Whether the message history modal/panel is open */

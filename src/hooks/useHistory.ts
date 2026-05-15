@@ -137,7 +137,13 @@ export function useHistory(): UseHistoryReturn {
       await deleteConversation(deleteConfirm);
       setConversations((prev) => prev.filter((c) => c.id !== deleteConfirm));
 
-      // Emit event to notify other components about deletion
+      // Sync deletion across windows using localStorage
+      localStorage.setItem("deskify-conversation-deleted", JSON.stringify({
+        id: deleteConfirm,
+        timestamp: Date.now()
+      }));
+
+      // Emit event for current window
       window.dispatchEvent(
         new CustomEvent("conversationDeleted", {
           detail: deleteConfirm,

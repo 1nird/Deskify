@@ -20,6 +20,8 @@ import { safeLocalStorage } from "@/lib";
 import { STORAGE_KEYS, AUTO_SYSTEM_PROMPT } from "@/config";
 import moment from "moment";
 
+import { PROMPT_TEMPLATES } from "@/lib/platform-instructions";
+
 const AUTO_PROMPT: DeskifyPrompt = {
   title: "Auto",
   prompt: AUTO_SYSTEM_PROMPT,
@@ -27,26 +29,12 @@ const AUTO_PROMPT: DeskifyPrompt = {
   modelName: "Short & concise · screen-aware",
 };
 
-const FALLBACK_PROMPTS: DeskifyPrompt[] = [
-  {
-    title: "Developer Assistant",
-    prompt: "You are an expert developer assistant. Provide concise, accurate code snippets and technical explanations. Always consider the provided screen context.",
-    modelId: "dev",
-    modelName: "Developer Mode",
-  },
-  {
-    title: "Writing Assistant",
-    prompt: "You are a professional writing assistant. Help the user draft, edit, and improve their text. Focus on clarity, tone, and grammar. Consider the text visible on their screen.",
-    modelId: "writer",
-    modelName: "Writer Mode",
-  },
-  {
-    title: "Math Solver",
-    prompt: "You are an expert math solver. Provide step-by-step solutions to mathematical problems visible on the screen.",
-    modelId: "math",
-    modelName: "Math Mode",
-  }
-];
+const FALLBACK_PROMPTS: DeskifyPrompt[] = PROMPT_TEMPLATES.map(t => ({
+  title: t.name,
+  prompt: t.prompt,
+  modelId: t.id,
+  modelName: `${t.name} Mode`
+}));
 
 interface DeskifyPrompt {
   title: string;
@@ -96,7 +84,7 @@ export const DeskifyPrompts = () => {
           return null;
         }
       }
-      return null;
+      return AUTO_PROMPT;
     });
   const [models, setModels] = useState<Model[]>([]);
   const fetchInitiated = useRef(false);
@@ -140,7 +128,17 @@ export const DeskifyPrompts = () => {
     setError(null);
     try {
       const response = await invoke<DeskifyPromptsResponse>("fetch_prompts");
-      setPrompts(response.prompts.length > 0 ? response.prompts : FALLBACK_PROMPTS);
+      const backendPrompts = response.prompts || [];
+      
+      // Combine local and backend prompts, ensuring uniqueness by title
+      const combined = [...FALLBACK_PROMPTS];
+      backendPrompts.forEach(bp => {
+        if (!combined.some(cp => cp.title === bp.title)) {
+          combined.push(bp);
+        }
+      });
+
+      setPrompts(combined);
       if (response.last_updated) {
         setLastUpdated(response.last_updated);
       }
@@ -210,7 +208,11 @@ export const DeskifyPrompts = () => {
   };
 
   const handleCardClick = (prompt: DeskifyPrompt) => {
-    handleSelectDeskifyPrompt(prompt);
+    if (isPromptSelected(prompt) && prompt.title !== AUTO_PROMPT.title) {
+      handleSelectDeskifyPrompt(AUTO_PROMPT);
+    } else {
+      handleSelectDeskifyPrompt(prompt);
+    }
   };
 
   const isPromptSelected = (prompt: DeskifyPrompt) => {

@@ -33,20 +33,20 @@ const Promote = () => {
             a $5&ndash;$10 coupon for a monthly plan. Email your post link to{" "}
             <a
               className="text-primary underline underline-offset-4"
-              href="mailto:support@deskify.app"
+              href="mailto:support@deskify.site"
             >
-              support@deskify.app
+              support@deskify.site
             </a>
             .
           </CardDescription>
         </div>
         <Button asChild className="w-full md:w-auto text-[10px] lg:text-xs">
           <a
-            href="https://deskify.app/promote"
+            href="https://deskify.site/promote"
             rel="noopener noreferrer"
             target="_blank"
           >
-            deskify.app/promote
+            deskify.site/promote
           </a>
         </Button>
       </CardContent>

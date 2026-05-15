@@ -11,16 +11,16 @@ const Contribute = () => {
           <CardDescription className="text-[10px] lg:text-xs">
             Fix a listed critical issue and earn a lifetime Dev Pro license
             valued at $120. Only issues on our contribute page qualify. read
-            more at deskify.app/contribute
+            more at deskify.site/contribute
           </CardDescription>
         </div>
         <Button asChild className="w-full md:w-auto text-[10px] lg:text-xs">
           <a
-            href="https://deskify.app/contribute"
+            href="https://deskify.site/contribute"
             rel="noopener noreferrer"
             target="_blank"
           >
-            deskify.app/contribute
+            deskify.site/contribute
           </a>
         </Button>
       </CardContent>

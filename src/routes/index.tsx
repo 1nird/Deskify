@@ -10,10 +10,12 @@ import {
   Chats,
 } from "@/pages";
 import { DashboardLayout } from "@/layouts";
+import { Updater } from "@/components";
 
 export default function AppRoutes() {
   return (
     <Router>
+      <Updater />
       <Routes>
         <Route path="/" element={<App />} />
         <Route element={<DashboardLayout />}>

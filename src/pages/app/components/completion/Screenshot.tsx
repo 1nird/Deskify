@@ -6,8 +6,9 @@ export const Screenshot = ({
   input,
   isLoading,
   submit,
-}: Pick<UseCompletionReturn, "input" | "isLoading" | "submit">) => {
-  const canSubmit = input.trim().length > 0;
+  screenshotConfiguration,
+}: Pick<UseCompletionReturn, "input" | "isLoading" | "submit" | "screenshotConfiguration">) => {
+  const canSubmit = input.trim().length > 0 || screenshotConfiguration.enabled;
 
   return (
     <Button

@@ -58,6 +58,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_keychain::init())
         .plugin(tauri_plugin_shell::init()) // Add shell plugin
+        .plugin(tauri_plugin_oauth::init())
         .plugin(posthog_init(PostHogConfig {
             api_key: posthog_api_key,
             options: Some(PostHogOptions {
@@ -71,6 +72,8 @@ pub fn run() {
             }),
             ..Default::default()
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_machine_uid::init());
     #[cfg(target_os = "macos")]
     {
@@ -177,6 +180,22 @@ pub fn run() {
                 )) {
                     eprintln!("Failed to initialize autostart plugin: {}", e);
                 }
+
+                // Single instance plugin
+                if let Err(e) = app.handle().plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+                    if let Some(window) = app.get_webview_window("dashboard") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                })) {
+                    eprintln!("Failed to initialize single-instance plugin: {}", e);
+                }
+            }
+
+            // Always show dashboard on initial launch (unless it's an autostart, but we handle that in frontend)
+            if let Some(window) = app.get_webview_window("dashboard") {
+                let _ = window.show();
+                let _ = window.set_focus();
             }
 
             // Initialize global shortcut plugin with centralized handler

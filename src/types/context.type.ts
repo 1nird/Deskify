@@ -2,6 +2,12 @@ import { Dispatch, SetStateAction } from "react";
 import { ScreenshotConfig, TYPE_PROVIDER } from "@/types";
 import { CursorType, CustomizableState } from "@/lib/storage";
 
+export type AppUserProfile = {
+  email: string;
+  name: string;
+  picture?: string;
+};
+
 export type IContextType = {
   systemPrompt: string;
   setSystemPrompt: Dispatch<SetStateAction<string>>;
@@ -32,4 +38,10 @@ export type IContextType = {
   setSupportsImages: (value: boolean) => void;
   showDashboardOnLaunch: boolean;
   setShowDashboardOnLaunch: (value: boolean) => void;
+  credits: number;
+  setCredits: Dispatch<SetStateAction<number>>;
+  lastRefresh: number;
+  setLastRefresh: Dispatch<SetStateAction<number>>;
+  user: AppUserProfile | null;
+  setUser: Dispatch<SetStateAction<AppUserProfile | null>>;
 };

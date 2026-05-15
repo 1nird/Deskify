@@ -1,4 +1,5 @@
-import { MessageSquareText, ChevronUp, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { MessageSquareText, ChevronUp, ChevronDown, Trash2, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -13,6 +14,7 @@ interface MessageHistoryProps {
   conversationHistory: ChatMessage[];
   currentConversationId: string | null;
   onStartNewConversation: () => void;
+  onDeleteConversation: () => Promise<void>;
   messageHistoryOpen: boolean;
   setMessageHistoryOpen: (open: boolean) => void;
   /** When false, hide portaled popover (chat shell collapsed) */
@@ -22,10 +24,13 @@ interface MessageHistoryProps {
 export const MessageHistory = ({
   conversationHistory,
   onStartNewConversation,
+  onDeleteConversation,
   messageHistoryOpen,
   setMessageHistoryOpen,
   isChatPanelExpanded = true,
 }: MessageHistoryProps) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   return (
     <Popover
       open={messageHistoryOpen && isChatPanelExpanded}
@@ -61,21 +66,57 @@ export const MessageHistory = ({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {confirmDelete ? (
+                <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 gap-1.5"
+                    onClick={() => {
+                      onDeleteConversation();
+                      setConfirmDelete(false);
+                      setMessageHistoryOpen(false);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="text-[10px] font-bold">Delete</span>
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground hover:bg-white/5"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                  onClick={() => setConfirmDelete(true)}
+                  title="Delete conversation"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <div className="w-px h-4 bg-border/50 mx-1" />
               <Button
                 size="sm"
                 onClick={() => {
                   onStartNewConversation();
                   setMessageHistoryOpen(false);
                 }}
-                className="text-xs"
+                className="text-xs h-8"
               >
                 New Chat
               </Button>
               <Button
-                size="sm"
+                size="icon"
                 variant="ghost"
                 onClick={() => setMessageHistoryOpen(false)}
-                className="text-xs"
+                className="h-8 w-8 text-muted-foreground/50 hover:text-foreground"
               >
                 {messageHistoryOpen ? (
                   <ChevronUp className="h-4 w-4" />

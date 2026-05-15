@@ -1,4 +1,4 @@
-import { Button, Logo } from "@/components";
+import { Button, Logo, UserProfile } from "@/components";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -19,12 +19,14 @@ export const Sidebar = () => {
       {/* Logo */}
       <div
         onClick={() => navigate("/chats")}
-        className="flex flex-col items-center justify-center h-24 mt-4 mb-2 cursor-pointer group"
+        className="flex flex-col items-center justify-center h-20 mt-3 mb-1 cursor-pointer group"
       >
-        <Logo size={56} />
-        <span className="text-[10px] text-muted-foreground/60 mt-2 block group-hover:text-primary/60 transition-colors">
-          {isLoading ? "..." : `v${version}`}
-        </span>
+        <Logo size={48} />
+        <div className="flex items-center gap-1 mt-1">
+          <span className="text-[8px] leading-none font-medium tracking-wide text-muted-foreground/55 tabular-nums group-hover:text-primary/55 transition-colors">
+            {isLoading ? "…" : `v${version}`}
+          </span>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -62,6 +64,8 @@ export const Sidebar = () => {
       </nav>
 
       <div className="flex flex-col space-y-0.5 px-3 pb-3">
+        <UserProfile />
+        <div className="my-2 h-px bg-white/5 mx-2" />
         {/* Social links */}
         <div className="flex flex-row justify-center items-center gap-1.5 mb-2 px-1">
           {footerLinks.map((item, index) => (
