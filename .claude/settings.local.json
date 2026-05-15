@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -rn \"VITE_GOOGLE_API_KEY\\\\|API_ACCESS_KEY\\\\|GOOGLE_API_KEY\" /c/Users/nirde/Desktop/Deskify/ --include=*.ts --include=*.rs --include=*.env* --include=*.json)",
+      "Bash(find /c/Users/nirde/Desktop/Deskify/src-tauri -type f -name *.rs)"
+    ]
+  }
+}

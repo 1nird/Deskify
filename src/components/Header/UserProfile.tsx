@@ -26,6 +26,7 @@ export const UserProfile = () => {
   const name = googleProfile?.name || "Google User";
   const email = googleProfile?.email || "";
   const picture = googleProfile?.picture;
+  const plan = googleProfile?.plan;
   const initial = name.charAt(0).toUpperCase();
 
   return (
@@ -64,6 +65,11 @@ export const UserProfile = () => {
           <div className="px-3 py-2 border-b border-white/5 mb-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Account</p>
             <p className="truncate text-xs font-medium text-white/90">{name}</p>
+            {plan ? (
+              <p className="truncate text-[10px] text-emerald-400/90 mt-0.5">
+                Plan: {plan}
+              </p>
+            ) : null}
           </div>
 
           <button

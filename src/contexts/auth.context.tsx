@@ -20,6 +20,9 @@ export interface GoogleProfile {
   email: string;
   name?: string;
   picture?: string;
+  isPaid?: boolean;
+  plan?: string;
+  source?: "google" | "website";
 }
 
 interface PersistedAuth {
@@ -79,6 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: gp.email,
           name: gp.name || gp.email,
           picture: gp.picture,
+          isPaid: gp.isPaid,
+          plan: gp.plan,
+          source: gp.source,
         });
       } else {
         setUser(null);
@@ -111,6 +117,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: profile.email,
         name: profile.name || profile.email || "Google user",
         picture: profile.picture,
+        isPaid: profile.isPaid,
+        plan: profile.plan,
+        source: profile.source,
       });
     },
     [setCredits, setLastRefresh, setUser]

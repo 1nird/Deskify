@@ -5,17 +5,18 @@ import { start, onUrl } from "@fabianlars/tauri-plugin-oauth";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 type Props = {
-  clientId: string;
+  clientId?: string;
   disabled?: boolean;
 };
 
 export const GoogleSignInButton = ({ clientId, disabled }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const websiteAuthUrl = (import.meta.env.VITE_WEBSITE_AUTH_URL ?? "").trim();
 
   const startSignIn = async () => {
     setError(null);
-    if (!clientId.trim()) {
+    if (!websiteAuthUrl && !clientId?.trim()) {
       setError("Missing client ID");
       return;
     }
@@ -37,10 +38,17 @@ export const GoogleSignInButton = ({ clientId, disabled }: Props) => {
       // 2. Start the local server to catch the redirect
       const port = await start();
 
-      // 3. Build the Auth URL with the dynamic localhost redirect
-      // Google Desktop Apps work best with 127.0.0.1 and NO trailing slash
+      // 3. Build the auth URL with dynamic localhost redirect.
       const redirectUri = `http://127.0.0.1:${port}`;
-      const authUrl = await buildGoogleAuthUrl(clientId.trim(), redirectUri);
+      let authUrl = "";
+      if (websiteAuthUrl) {
+        const url = new URL(websiteAuthUrl);
+        url.searchParams.set("redirect", redirectUri);
+        url.searchParams.set("source", "desktop");
+        authUrl = url.toString();
+      } else {
+        authUrl = await buildGoogleAuthUrl(clientId!.trim(), redirectUri);
+      }
 
       // 4. Open the URL in the user's default system browser
       await openUrl(authUrl);
@@ -80,7 +88,7 @@ export const GoogleSignInButton = ({ clientId, disabled }: Props) => {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        Sign in with Google
+        Continue
       </Button>
       {error ? (
         <p className="text-center text-xs text-red-400">{error}</p>

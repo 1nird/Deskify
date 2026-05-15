@@ -2,6 +2,16 @@ const STATE_KEY = "deskify_google_oauth_state";
 const VERIFIER_KEY = "deskify_google_oauth_verifier";
 const REDIRECT_URI_KEY = "deskify_google_oauth_redirect_uri";
 
+export interface DesktopAuthProfile {
+  sub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  isPaid?: boolean;
+  plan?: string;
+  source?: "google" | "website";
+}
+
 /** Generates a random string for PKCE */
 function generateRandomString(length: number): string {
   const array = new Uint8Array(length);
@@ -63,6 +73,112 @@ export interface GoogleAuthResult {
   redirectUri: string;
   error?: string;
   errorDescription?: string;
+}
+
+function parseBoolean(value: string | null): boolean | undefined {
+  if (!value) return undefined;
+  if (value.toLowerCase() === "true" || value === "1") return true;
+  if (value.toLowerCase() === "false" || value === "0") return false;
+  return undefined;
+}
+
+function decodeBase64Url(input: string): string {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  return atob(padded);
+}
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  const segments = token.split(".");
+  if (segments.length < 2) return null;
+  try {
+    const payloadRaw = decodeBase64Url(segments[1]);
+    const payload = JSON.parse(payloadRaw) as Record<string, unknown>;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function parseDesktopAuthProfile(): DesktopAuthProfile | null {
+  const params = new URLSearchParams(
+    window.location.search || window.location.hash.slice(1)
+  );
+
+  const packed =
+    params.get("desktop_auth") ||
+    params.get("auth_profile") ||
+    params.get("session");
+
+  if (packed) {
+    try {
+      const decoded = decodeBase64Url(decodeURIComponent(packed));
+      const parsed = JSON.parse(decoded) as Partial<DesktopAuthProfile>;
+      if (!parsed.email) return null;
+      return {
+        sub: String(parsed.sub ?? parsed.email),
+        email: String(parsed.email),
+        name: parsed.name ? String(parsed.name) : undefined,
+        picture: parsed.picture ? String(parsed.picture) : undefined,
+        plan: parsed.plan ? String(parsed.plan) : undefined,
+        isPaid: parsed.isPaid === true,
+        source: parsed.source === "google" ? "google" : "website",
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const email = params.get("email");
+  if (email) {
+    return {
+      sub: params.get("sub") || email,
+      email,
+      name: params.get("name") || undefined,
+      picture: params.get("picture") || undefined,
+      plan: params.get("plan") || undefined,
+      isPaid: parseBoolean(params.get("is_paid")),
+      source: "website",
+    };
+  }
+
+  const accessToken = params.get("access_token");
+  if (accessToken) {
+    const jwt = parseJwtPayload(accessToken);
+    const jwtEmail = typeof jwt?.email === "string" ? jwt.email : "";
+    if (!jwtEmail) return null;
+
+    const paidFromClaim =
+      parseBoolean(
+        typeof jwt?.is_paid === "string" ? jwt.is_paid : null
+      ) ??
+      (typeof jwt?.is_paid === "boolean" ? jwt.is_paid : undefined) ??
+      parseBoolean(typeof jwt?.paid === "string" ? jwt.paid : null) ??
+      (typeof jwt?.paid === "boolean" ? jwt.paid : undefined);
+
+    return {
+      sub:
+        (typeof jwt?.sub === "string" ? jwt.sub : "") ||
+        params.get("sub") ||
+        jwtEmail,
+      email: jwtEmail,
+      name:
+        (typeof jwt?.name === "string" ? jwt.name : "") ||
+        (typeof jwt?.user_name === "string" ? jwt.user_name : "") ||
+        undefined,
+      picture: typeof jwt?.picture === "string" ? jwt.picture : undefined,
+      plan:
+        (typeof jwt?.plan === "string" ? jwt.plan : "") ||
+        (typeof jwt?.subscription_tier === "string"
+          ? jwt.subscription_tier
+          : "") ||
+        undefined,
+      isPaid: paidFromClaim,
+      source: "website",
+    };
+  }
+
+  return null;
 }
 
 export function parseGoogleAuthParams(): GoogleAuthResult | null {

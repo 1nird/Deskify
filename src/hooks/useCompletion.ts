@@ -520,6 +520,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
         role: "user",
         content: userMessage,
         timestamp,
+        attachedFiles: _attachedFiles.length > 0 ? _attachedFiles : undefined,
       };
 
       const assistantMsg: ChatMessage = {
@@ -937,7 +938,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     isChatPanelExpanded &&
     (isPopoverOpen || micOpen || messageHistoryOpen || isFilesPopoverOpen);
 
-  const collapsedWindowHeight = !isChatPanelExpanded ? 745 : 745;
+  const collapsedWindowHeight = !isChatPanelExpanded ? 92 : 184;
 
   useEffect(() => {
     resizeWindow(popoverChromeExpanded, collapsedWindowHeight);
@@ -1007,76 +1008,83 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isPopoverOpen, isChatPanelExpanded, scrollAreaRef]);
 
-  const captureScreenshot = useCallback(async () => {
-    if (!handleScreenshotSubmit) return;
+  const captureScreenshot = useCallback(
+    async (mode: "default" | "selection" = "default") => {
+      if (!handleScreenshotSubmit) return;
 
-    const config = screenshotConfigRef.current;
-    screenshotInitiatedByThisContext.current = true;
-    setIsScreenshotLoading(true);
+      const config = screenshotConfigRef.current;
+      screenshotInitiatedByThisContext.current = true;
+      setIsScreenshotLoading(true);
 
-    try {
-      // Check screen recording permission on macOS
-      const platform = navigator.platform.toLowerCase();
-      if (platform.includes("mac") && !hasCheckedPermissionRef.current) {
-        const {
-          checkScreenRecordingPermission,
-          requestScreenRecordingPermission,
-        } = await import("tauri-plugin-macos-permissions-api");
+      try {
+        // Check screen recording permission on macOS
+        const platform = navigator.platform.toLowerCase();
+        if (platform.includes("mac") && !hasCheckedPermissionRef.current) {
+          const {
+            checkScreenRecordingPermission,
+            requestScreenRecordingPermission,
+          } = await import("tauri-plugin-macos-permissions-api");
 
-        const hasPermission = await checkScreenRecordingPermission();
+          const hasPermission = await checkScreenRecordingPermission();
 
-        if (!hasPermission) {
-          // Request permission
-          await requestScreenRecordingPermission();
+          if (!hasPermission) {
+            // Request permission
+            await requestScreenRecordingPermission();
 
-          // Wait a moment and check again
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+            // Wait a moment and check again
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          const hasPermissionNow = await checkScreenRecordingPermission();
+            const hasPermissionNow = await checkScreenRecordingPermission();
 
-          if (!hasPermissionNow) {
-            setState((prev) => ({
-              ...prev,
-              error:
-                "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see Deskify in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
-            }));
-            setIsScreenshotLoading(false);
-            screenshotInitiatedByThisContext.current = false;
-            return;
+            if (!hasPermissionNow) {
+              setState((prev) => ({
+                ...prev,
+                error:
+                  "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see Deskify in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
+              }));
+              setIsScreenshotLoading(false);
+              screenshotInitiatedByThisContext.current = false;
+              return;
+            }
           }
+          hasCheckedPermissionRef.current = true;
         }
-        hasCheckedPermissionRef.current = true;
-      }
 
-      if (config.enabled) {
-        const base64 = await invoke("capture_to_base64");
+        const shouldForceSelection = mode === "selection";
 
-        if (config.mode === "auto") {
-          const finalPrompt = state.input.trim() ? state.input.trim() : config.autoPrompt;
-          await handleScreenshotSubmit(base64 as string, finalPrompt);
-        } else if (config.mode === "manual") {
-          await handleScreenshotSubmit(base64 as string);
+        if (config.enabled && !shouldForceSelection) {
+          const base64 = await invoke("capture_to_base64");
+
+          if (config.mode === "auto") {
+            const finalPrompt = state.input.trim()
+              ? state.input.trim()
+              : config.autoPrompt;
+            await handleScreenshotSubmit(base64 as string, finalPrompt);
+          } else if (config.mode === "manual") {
+            await handleScreenshotSubmit(base64 as string);
+          }
+          screenshotInitiatedByThisContext.current = false;
+        } else {
+          isProcessingScreenshotRef.current = false;
+          await invoke("start_screen_capture");
         }
-        screenshotInitiatedByThisContext.current = false;
-      } else {
+      } catch (error) {
+        console.error("Screenshot capture failed:", error);
+
+        setState((prev) => ({
+          ...prev,
+          error: `Failed to capture screenshot: ${error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error)}`,
+        }));
         isProcessingScreenshotRef.current = false;
-        await invoke("start_screen_capture");
+        screenshotInitiatedByThisContext.current = false;
+      } finally {
+        if (config.enabled) {
+          setIsScreenshotLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Screenshot capture failed:", error);
-
-      setState((prev) => ({
-        ...prev,
-        error: `Failed to capture screenshot: ${error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error)}`,
-      }));
-      isProcessingScreenshotRef.current = false;
-      screenshotInitiatedByThisContext.current = false;
-    } finally {
-      if (config.enabled) {
-        setIsScreenshotLoading(false);
-      }
-    }
-  }, [handleScreenshotSubmit]);
+    },
+    [handleScreenshotSubmit]
+  );
 
   useEffect(() => {
     let unlisten: any;

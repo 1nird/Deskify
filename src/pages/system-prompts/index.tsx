@@ -101,14 +101,16 @@ const SystemPrompts = () => {
 
       if (form.id) {
         // Update existing prompt
+        const fallbackName = form.name.trim() || "Custom Prompt";
         await updatePrompt(form.id, {
-          name: form.name,
+          name: fallbackName,
           prompt: form.prompt,
         });
       } else {
         // Create new prompt
+        const fallbackName = form.name.trim() || "Custom Prompt";
         const newPrompt = await createPrompt({
-          name: form.name,
+          name: fallbackName,
           prompt: form.prompt,
         });
         // Auto-select the newly created prompt
@@ -131,20 +133,6 @@ const SystemPrompts = () => {
     await deletePrompt(id);
     setForm({ name: "", prompt: "" });
     setIsDeleteDialogOpen(false);
-  };
-
-  /**
-   * Handle AI generation
-   */
-  const handleGenerate = (
-    generatedPrompt: string,
-    generatedPromptName: string
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      prompt: generatedPrompt,
-      name: generatedPromptName,
-    }));
   };
 
   /**
@@ -280,7 +268,6 @@ const SystemPrompts = () => {
         form={form}
         setForm={setForm}
         onSave={handleSave}
-        onGenerate={handleGenerate}
         isEditing={!!form.id}
         isSaving={isSaving}
       />

@@ -6,6 +6,9 @@ export type AppUserProfile = {
   email: string;
   name: string;
   picture?: string;
+  isPaid?: boolean;
+  plan?: string;
+  source?: "google" | "website";
 };
 
 export type IContextType = {

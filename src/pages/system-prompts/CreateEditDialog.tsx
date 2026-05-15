@@ -9,7 +9,6 @@ import {
   Input,
   Textarea,
 } from "@/components";
-import { GenerateSystemPrompt } from "./Generate";
 import { SparklesIcon } from "lucide-react";
 
 interface CreateEditDialogProps {
@@ -28,7 +27,6 @@ interface CreateEditDialogProps {
     }>
   >;
   onSave: () => void;
-  onGenerate: (prompt: string, promptName: string) => void;
   isEditing?: boolean;
   isSaving?: boolean;
 }
@@ -39,11 +37,10 @@ export const CreateEditDialog = ({
   form,
   setForm,
   onSave,
-  onGenerate,
   isEditing = false,
   isSaving = false,
 }: CreateEditDialogProps) => {
-  const isFormValid = form.name.trim() && form.prompt.trim();
+  const isFormValid = form.prompt.trim();
 
   const handleSave = () => {
     onSave();
@@ -64,7 +61,6 @@ export const CreateEditDialog = ({
                   : "Define a new AI behavior and personality."}
               </DialogDescription>
             </div>
-            <GenerateSystemPrompt onGenerate={onGenerate} />
           </div>
         </DialogHeader>
         <div className="space-y-4 py-4 px-6 overflow-y-auto flex-1">

@@ -19,14 +19,18 @@ let lastScreenshotEventTime = 0;
 // Global callback refs
 let globalInputRef: HTMLInputElement | null = null;
 let globalAudioCallback: (() => void) | null = null;
-let globalScreenshotCallback: (() => void | Promise<void>) | null = null;
+let globalScreenshotCallback:
+  | ((mode?: "default" | "selection") => void | Promise<void>)
+  | null = null;
 let globalSystemAudioCallback: (() => void) | null = null;
 let globalCustomShortcutCallbacks: Map<string, () => void> = new Map();
 
 export const useGlobalShortcuts = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const audioCallbackRef = useRef<(() => void) | null>(null);
-  const screenshotCallbackRef = useRef<(() => void) | null>(null);
+  const screenshotCallbackRef = useRef<
+    ((mode?: "default" | "selection") => void | Promise<void>) | null
+  >(null);
   const systemAudioCallbackRef = useRef<(() => void) | null>(null);
   const customShortcutCallbacksRef = useRef<Map<string, () => void>>(new Map());
 
@@ -80,7 +84,7 @@ export const useGlobalShortcuts = () => {
 
   // Register screenshot callback
   const registerScreenshotCallback = useCallback(
-    (callback: () => void | Promise<void>) => {
+    (callback: (mode?: "default" | "selection") => void | Promise<void>) => {
       screenshotCallbackRef.current = callback;
       globalScreenshotCallback = callback;
     },
@@ -193,7 +197,7 @@ export const useGlobalShortcuts = () => {
 
           if (globalScreenshotCallback) {
             try {
-              Promise.resolve(globalScreenshotCallback())
+              Promise.resolve(globalScreenshotCallback("default"))
                 .catch((error) => {
                   console.error("Screenshot shortcut callback failed:", error);
                 })
@@ -213,6 +217,35 @@ export const useGlobalShortcuts = () => {
           }
         });
         globalEventListeners.screenshot = unlistenScreenshot;
+
+        const unlistenSelectionScreenshot = await listen(
+          "trigger-screen-selection",
+          () => {
+            window.dispatchEvent(new CustomEvent("expand-chat"));
+            const now = Date.now();
+            const timeSinceLastEvent = now - lastScreenshotEventTime;
+            if (timeSinceLastEvent < 300) {
+              return;
+            }
+            lastScreenshotEventTime = now;
+
+            if (globalScreenshotCallback) {
+              Promise.resolve(globalScreenshotCallback("selection")).catch(
+                (error) => {
+                  console.error(
+                    "Screen selection shortcut callback failed:",
+                    error
+                  );
+                }
+              );
+            }
+          }
+        );
+        const previousScreenshotUnlisten = globalEventListeners.screenshot;
+        globalEventListeners.screenshot = () => {
+          previousScreenshotUnlisten?.();
+          unlistenSelectionScreenshot();
+        };
 
         // Listen for system audio toggle event
         const unlistenSystemAudio = await listen("toggle-system-audio", () => {

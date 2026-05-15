@@ -7,10 +7,12 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
 import {
   clearOAuthFragmentFromUrl,
+  parseDesktopAuthProfile,
   parseGoogleAuthParams,
 } from "@/lib/google-oauth-redirect";
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+const websiteAuthUrl = (import.meta.env.VITE_WEBSITE_AUTH_URL ?? "").trim();
 
 type Props = {
   children: ReactNode;
@@ -27,8 +29,8 @@ export const AuthGate = ({ children }: Props) => {
     // For a real production app, you would fetch this from your API
     const checkVersion = async () => {
       try {
-        const currentVersion = "2.0.0"; // Hardcoded for this build
-        const minAllowedVersion = "2.0.0"; // Only allow v2+
+        const currentVersion = "2.3.0"; // Hardcoded for this build
+        const minAllowedVersion = "2.3.0"; // Only allow v2.3+
         
         if (currentVersion < minAllowedVersion) {
           setVersionError(true);
@@ -45,6 +47,22 @@ export const AuthGate = ({ children }: Props) => {
     if (isAuthenticated) return;
 
     const checkAuth = async () => {
+      const desktopProfile = parseDesktopAuthProfile();
+      if (desktopProfile?.email) {
+        clearOAuthFragmentFromUrl();
+        const profile: GoogleProfile = {
+          sub: String(desktopProfile.sub || desktopProfile.email),
+          email: String(desktopProfile.email),
+          name: desktopProfile.name,
+          picture: desktopProfile.picture,
+          isPaid: desktopProfile.isPaid,
+          plan: desktopProfile.plan,
+          source: desktopProfile.source ?? "website",
+        };
+        signInWithGoogleProfile(profile);
+        return;
+      }
+
       const parsed = parseGoogleAuthParams();
       if (!parsed) return;
 
@@ -53,7 +71,7 @@ export const AuthGate = ({ children }: Props) => {
         setOauthMsg(
           parsed.errorDescription
             ? `${parsed.error}: ${parsed.errorDescription}`
-            : `Google sign-in failed (${parsed.error}). Check redirect URI.`
+            : `Sign-in failed (${parsed.error}). Check redirect URI.`
         );
         return;
       }
@@ -66,6 +84,12 @@ export const AuthGate = ({ children }: Props) => {
       clearOAuthFragmentFromUrl();
 
       try {
+        if (!googleClientId.trim()) {
+          throw new Error(
+            "Google client ID missing. Set VITE_GOOGLE_CLIENT_ID or use VITE_WEBSITE_AUTH_URL with desktop auth payload."
+          );
+        }
+
         // 1. Exchange code for access token (PKCE)
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
@@ -157,7 +181,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v2.0.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v2.3.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">
@@ -193,7 +217,7 @@ export const AuthGate = ({ children }: Props) => {
           </div>
 
           <div className="w-full pt-4 space-y-4">
-            {googleClientId ? (
+            {googleClientId || websiteAuthUrl ? (
               <GoogleSignInButton
                 clientId={googleClientId}
                 disabled={oauthBusy}
@@ -201,8 +225,8 @@ export const AuthGate = ({ children }: Props) => {
             ) : (
               <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
                  <p className="text-xs text-amber-200/80 leading-relaxed">
-                   Setup required: Add <code className="bg-black/40 px-1 rounded text-amber-400">VITE_GOOGLE_CLIENT_ID</code> to your environment.
-                 </p>
+                    Setup required: add <code className="bg-black/40 px-1 rounded text-amber-400">VITE_WEBSITE_AUTH_URL</code> (recommended) or <code className="bg-black/40 px-1 rounded text-amber-400">VITE_GOOGLE_CLIENT_ID</code>.
+                  </p>
               </div>
             )}
           </div>

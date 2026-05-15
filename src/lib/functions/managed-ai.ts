@@ -14,7 +14,7 @@ import { getResponseSettings, RESPONSE_LENGTHS, LANGUAGES } from "@/lib";
 
 // ─── Hardcoded Config ────────────────────────────────────────────────────────
 
-const GOOGLE_API_KEY = "AIzaSyDTQrsnOv8F3gi5DyrV0_mvr04PncMlM70";
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY ?? "";
 const TARGET_MODEL = "gemini-2.5-flash-lite";
 const RESPONSE_CONTENT_PATH = "candidates[0].content.parts[0].text";
 
@@ -40,6 +40,49 @@ function buildEnhancedSystemPrompt(base?: string): string {
   return parts.join("\n\n");
 }
 
+function parseDataUrl(
+  url: string
+): { mimeType: string; data: string } | null {
+  const match = url.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], data: match[2] };
+}
+
+function normalizeMessageParts(content: Message["content"]): any[] {
+  if (typeof content === "string") {
+    return [{ text: content }];
+  }
+
+  const parts: any[] = [];
+  for (const part of content) {
+    if (part.type === "text" && part.text) {
+      parts.push({ text: part.text });
+      continue;
+    }
+
+    if (part.type === "image_url" && part.image_url?.url) {
+      const parsed = parseDataUrl(part.image_url.url);
+      if (parsed) {
+        parts.push({
+          inline_data: {
+            mime_type: parsed.mimeType,
+            data: parsed.data,
+          },
+        });
+      }
+      continue;
+    }
+
+    if (part.type === "inline_data" && part.inline_data) {
+      parts.push({
+        inline_data: part.inline_data,
+      });
+    }
+  }
+
+  return parts.length > 0 ? parts : [{ text: "" }];
+}
+
 interface ManagedRequestParams {
   systemPrompt?: string;
   userMessage: string;
@@ -48,6 +91,26 @@ interface ManagedRequestParams {
   signal?: AbortSignal;
   selectedProvider?: any;
   allAiProviders?: any[];
+}
+
+function resolveApiKeyAndModel(params: ManagedRequestParams): {
+  apiKey: string;
+  model: string;
+} {
+  const selected = params.selectedProvider as
+    | { variables?: Record<string, string>; provider?: string }
+    | undefined;
+
+  const apiKey =
+    selected?.variables?.API_KEY ||
+    selected?.variables?.api_key ||
+    GOOGLE_API_KEY;
+  const model =
+    selected?.variables?.MODEL ||
+    selected?.variables?.model ||
+    TARGET_MODEL;
+
+  return { apiKey, model };
 }
 
 async function tryRequest(
@@ -88,6 +151,12 @@ export async function* fetchManagedAIResponse(
 
   if (signal?.aborted) return;
 
+  const { apiKey, model } = resolveApiKeyAndModel(params);
+  if (!apiKey) {
+    yield "AI Error: Missing API key. Configure your provider API key in Settings.";
+    return;
+  }
+
   const enhancedPrompt = buildEnhancedSystemPrompt(systemPrompt);
 
   const contents: any[] = [];
@@ -96,7 +165,7 @@ export async function* fetchManagedAIResponse(
   for (const msg of history) {
     contents.push({
       role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
+      parts: normalizeMessageParts(msg.content),
     });
   }
 
@@ -139,7 +208,7 @@ export async function* fetchManagedAIResponse(
 
   let response: Response;
   try {
-    response = await tryRequest(TARGET_MODEL, GOOGLE_API_KEY, baseBody, signal);
+    response = await tryRequest(model, apiKey, baseBody, signal);
   } catch (err) {
     lastError = err instanceof Error ? err : new Error(String(err));
     yield `AI Error: Failed to connect to Google API. ${lastError.message}`;

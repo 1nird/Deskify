@@ -10,8 +10,8 @@ export const useVersion = () => {
     const fetchVersion = async () => {
       try {
         setIsLoading(true);
-        await getAppVersion();
-        setVersion("2.0.1"); // Hardcoded for testing updater UI
+        const appVersion = await getAppVersion();
+        setVersion(appVersion || "Unknown");
         setError(null);
       } catch (err) {
         console.error("Failed to fetch version:", err);

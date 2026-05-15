@@ -75,7 +75,7 @@ pub fn set_window_height(window: tauri::WebviewWindow, height: u32) -> Result<()
         return Ok(());
     }
 
-    let new_size = LogicalSize::new(995.0, height as f64);
+    let new_size = LogicalSize::new(560.0, height as f64);
     window
         .set_size(Size::Logical(new_size))
         .map_err(|e| format!("Failed to resize window: {}", e))?;

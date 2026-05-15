@@ -78,7 +78,23 @@ function parseStoredUser(raw: string | null): AppUserProfile | null {
       typeof p.picture === "string" && p.picture.trim() !== ""
         ? p.picture.trim()
         : undefined;
-    return { email, name: name || email, ...(picture ? { picture } : {}) };
+    const plan =
+      typeof p.plan === "string" && p.plan.trim() !== ""
+        ? p.plan.trim()
+        : undefined;
+    const source =
+      p.source === "google" || p.source === "website"
+        ? p.source
+        : undefined;
+    const isPaid = typeof p.isPaid === "boolean" ? p.isPaid : undefined;
+    return {
+      email,
+      name: name || email,
+      ...(picture ? { picture } : {}),
+      ...(plan ? { plan } : {}),
+      ...(source ? { source } : {}),
+      ...(typeof isPaid === "boolean" ? { isPaid } : {}),
+    };
   } catch {
     return null;
   }
@@ -188,9 +204,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Function to load AI, system prompt and screenshot config data from storage
   const loadData = () => {
-    // Always use the hardcoded DEFAULT_SYSTEM_PROMPT — never load from cache
-    setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
-    safeLocalStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT);
+    const savedSystemPrompt = safeLocalStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT);
+    const resolvedSystemPrompt =
+      savedSystemPrompt && savedSystemPrompt.trim()
+        ? savedSystemPrompt
+        : DEFAULT_SYSTEM_PROMPT;
+    setSystemPrompt(resolvedSystemPrompt);
+    safeLocalStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, resolvedSystemPrompt);
 
     // Load screenshot configuration
     const savedScreenshotConfig = safeLocalStorage.getItem(
@@ -200,10 +220,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
         const parsed = JSON.parse(savedScreenshotConfig);
         if (typeof parsed === "object" && parsed !== null) {
+          const mode = parsed.mode === "manual" ? "manual" : "auto";
+          const autoPrompt =
+            typeof parsed.autoPrompt === "string" && parsed.autoPrompt.trim()
+              ? parsed.autoPrompt
+              : SCREENSHOT_AUTO_PROMPT_DEFAULT;
+          const displayPrompt =
+            typeof parsed.displayPrompt === "string" && parsed.displayPrompt.trim()
+              ? parsed.displayPrompt
+              : "Assist";
+
           setScreenshotConfiguration({
-            mode: parsed.mode || "auto",
-            autoPrompt: SCREENSHOT_AUTO_PROMPT_DEFAULT,
-            displayPrompt: "Assist",
+            mode,
+            autoPrompt,
+            displayPrompt,
             enabled: parsed.enabled !== undefined ? parsed.enabled : true,
           });
         }
