@@ -40,7 +40,7 @@ fn get_app_version() -> String {
 pub fn run() {
     // Get PostHog API key
     let posthog_api_key = option_env!("POSTHOG_API_KEY").unwrap_or("").to_string();
-    let builder = tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:deskify.db", db::migrations())
@@ -79,7 +79,7 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_nspanel::init());
     }
-    let builder = builder
+    let mut builder = builder
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             window::set_window_height,
