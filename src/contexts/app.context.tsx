@@ -128,8 +128,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return {
       provider: "gemini",
       variables: {
-        API_KEY: "AIzaSyDTQrsnOv8F3gi5DyrV0_mvr04PncMlM70",
-        MODEL: "gemini-2.5-flash-lite"
+        API_KEY: "",
+        MODEL: "gemini-2.5-flash-lite",
       },
     };
   });
@@ -341,22 +341,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     checkCreditRefresh();
     void initializeApp();
 
-    // Force migration to Gemini API or ensure Gemini has the correct key
-    const stored = safeLocalStorage.getItem(STORAGE_KEYS.SELECTED_AI_PROVIDER);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.provider === "openrouter" || (parsed.provider === "gemini" && !parsed.variables?.API_KEY)) {
-          setSelectedAIProvider({
-            provider: "gemini",
-            variables: {
-              API_KEY: "AIzaSyDTQrsnOv8F3gi5DyrV0_mvr04PncMlM70",
-              MODEL: "gemini-2.5-flash-lite"
-            }
-          });
-        }
-      } catch (e) { }
-    }
   }, []);
 
   // Handle customizable settings on state changes

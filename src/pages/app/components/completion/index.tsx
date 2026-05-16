@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useCompletion } from "@/hooks";
+import { ModelSelector } from "@/components";
 import { Screenshot } from "./Screenshot";
 import { ScreenshotToggle } from "./ScreenshotToggle";
 import { Files } from "./Files";
@@ -46,6 +47,7 @@ export const Completion = ({
           isHidden={isHidden}
           isChatPanelExpanded={isChatPanelExpanded}
         />
+        <ModelSelector />
         <ScreenshotToggle
           screenshotConfiguration={completion.screenshotConfiguration}
           onScreenshotsEnabledChange={completion.onScreenshotsEnabledChange}

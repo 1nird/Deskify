@@ -65,11 +65,9 @@ export const UserProfile = () => {
           <div className="px-3 py-2 border-b border-white/5 mb-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">Account</p>
             <p className="truncate text-xs font-medium text-white/90">{name}</p>
-            {plan ? (
-              <p className="truncate text-[10px] text-emerald-400/90 mt-0.5">
-                Plan: {plan}
-              </p>
-            ) : null}
+            <p className={cn("truncate text-[10px] mt-0.5 font-semibold", googleProfile?.isPaid ? "text-emerald-400" : "text-white/40")}>
+              {googleProfile?.isPaid && plan ? plan : "Free"} Plan
+            </p>
           </div>
 
           <button

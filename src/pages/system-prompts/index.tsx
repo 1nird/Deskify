@@ -179,6 +179,7 @@ const SystemPrompts = () => {
           Create New
         </Button>
       </div>
+
       {filteredPrompts.length === 0 ? (
         <Empty
           isLoading={isLoading}

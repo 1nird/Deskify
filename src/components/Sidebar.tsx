@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useMenuItems, useVersion } from "@/hooks";
+import { usePremium } from "@/components";
 
 export const Sidebar = () => {
   const { version, isLoading } = useVersion();
-  const { menu, footerLinks, footerItems } = useMenuItems();
+  const { isPremium } = usePremium();
+  const { menu, footerLinks, footerItems } = useMenuItems(isPremium === true);
 
   const navigate = useNavigate();
   const activeRoute = useLocation().pathname;
@@ -32,16 +34,23 @@ export const Sidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 px-3 py-6">
         {menu.map((item, index) => {
-          const isActive = activeRoute === item.href || (item.href !== "/" && activeRoute.startsWith(item.href));
+          const isActive = activeRoute === item.href || (item.href !== "/" && item.href !== "#" && activeRoute.startsWith(item.href));
           return (
             <button
-              onClick={() => navigate(item.href)}
+              onClick={() => {
+                if (item.label === "Upgrade to Premium") {
+                  openUrl("https://deskify.site/pricing");
+                } else {
+                  navigate(item.href);
+                }
+              }}
               key={`${item.label}-${index}`}
               className={cn(
                 "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs lg:text-sm transition-all duration-200",
                 isActive
                   ? "nav-active font-medium"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                item.className
               )}
             >
               <div className="flex items-center gap-3">
@@ -84,21 +93,36 @@ export const Sidebar = () => {
 
         {/* Footer action items */}
         {footerItems.map((item, index) => (
-          <a
-            href={item.href}
-            onClick={item.action}
-            target={item.href ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            key={`${item.label}-${index}`}
-            className={cn(
-              "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs lg:text-sm text-sidebar-foreground/60 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <item.icon className="size-3.5 lg:size-4 transition-all duration-200" />
-              {item.label}
-            </div>
-          </a>
+          item.href ? (
+            <a
+              href={item.href}
+              onClick={item.action}
+              target="_blank"
+              rel="noopener noreferrer"
+              key={`${item.label}-${index}`}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs lg:text-sm text-sidebar-foreground/60 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="size-3.5 lg:size-4 transition-all duration-200" />
+                {item.label}
+              </div>
+            </a>
+          ) : (
+            <button
+              onClick={item.action}
+              key={`${item.label}-${index}`}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs lg:text-sm text-sidebar-foreground/60 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="size-3.5 lg:size-4 transition-all duration-200" />
+                {item.label}
+              </div>
+            </button>
+          )
         ))}
       </div>
     </aside>

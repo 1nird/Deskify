@@ -93,24 +93,31 @@ interface ManagedRequestParams {
   allAiProviders?: any[];
 }
 
-function resolveApiKeyAndModel(params: ManagedRequestParams): {
-  apiKey: string;
+function resolveApiKeysAndModel(params: ManagedRequestParams): {
+  apiKeys: string[];
   model: string;
 } {
   const selected = params.selectedProvider as
     | { variables?: Record<string, string>; provider?: string }
     | undefined;
+  const isGeminiSelected = selected?.provider === "gemini";
+  const selectedKey = (
+    selected?.variables?.API_KEY || selected?.variables?.api_key || ""
+  ).trim();
+  const envKey = GOOGLE_API_KEY.trim();
 
-  const apiKey =
-    selected?.variables?.API_KEY ||
-    selected?.variables?.api_key ||
-    GOOGLE_API_KEY;
-  const model =
-    selected?.variables?.MODEL ||
-    selected?.variables?.model ||
-    TARGET_MODEL;
+  const apiKeys = (
+    isGeminiSelected
+      ? [selectedKey, envKey]
+      : [envKey]
+  ).filter((key, index, arr) => key.length > 0 && arr.indexOf(key) === index);
 
-  return { apiKey, model };
+  const modelRaw = isGeminiSelected
+    ? selected?.variables?.MODEL || selected?.variables?.model || TARGET_MODEL
+    : TARGET_MODEL;
+  const model = String(modelRaw || TARGET_MODEL).trim() || TARGET_MODEL;
+
+  return { apiKeys, model };
 }
 
 async function tryRequest(
@@ -151,9 +158,9 @@ export async function* fetchManagedAIResponse(
 
   if (signal?.aborted) return;
 
-  const { apiKey, model } = resolveApiKeyAndModel(params);
-  if (!apiKey) {
-    yield "AI Error: Missing API key. Configure your provider API key in Settings.";
+  const { apiKeys, model } = resolveApiKeysAndModel(params);
+  if (apiKeys.length === 0) {
+    yield "AI Error: Missing Gemini API key. Set a Gemini key in Settings > AI Provider (Gemini) or VITE_GOOGLE_API_KEY.";
     return;
   }
 
@@ -206,12 +213,27 @@ export async function* fetchManagedAIResponse(
 
   if (signal?.aborted) return;
 
-  let response: Response;
-  try {
-    response = await tryRequest(model, apiKey, baseBody, signal);
-  } catch (err) {
-    lastError = err instanceof Error ? err : new Error(String(err));
-    yield `AI Error: Failed to connect to Google API. ${lastError.message}`;
+  let response: Response | null = null;
+  for (const key of apiKeys) {
+    try {
+      response = await tryRequest(model, key, baseBody, signal);
+      break;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      continue;
+    }
+  }
+
+  if (!response) {
+    if (
+      lastError &&
+      (lastError.message.includes("API_KEY_INVALID") ||
+        /api key expired/i.test(lastError.message))
+    ) {
+      yield "AI Error: Your Google Gemini API key is invalid or expired. Update it in Settings > AI Provider.";
+      return;
+    }
+    yield `AI Error: Failed to connect to Google API. ${lastError?.message ?? "Unknown error"}`;
     return;
   }
 

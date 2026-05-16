@@ -13,8 +13,10 @@ import {
 import { ShortcutAction, ShortcutBinding } from "@/types";
 import { invoke } from "@tauri-apps/api/core";
 import { ShortcutRecorder } from "./ShortcutRecorder";
+import { usePremium } from "@/components";
 
 export const ShortcutManager = () => {
+  const { isPremium } = usePremium();
   const [actions, setActions] = useState<ShortcutAction[]>([]);
   const [bindings, setBindings] = useState<Record<string, ShortcutBinding>>({});
   const [editingAction, setEditingAction] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export const ShortcutManager = () => {
             key: getPlatformDefaultKey(action),
             enabled: true,
           };
-          const isLocked = false;
+          const isLocked = !isPremium;
           const isEditing = editingAction === action.id;
 
           return (
@@ -233,7 +235,10 @@ export const ShortcutManager = () => {
                         {action.name}
                       </p>
                       {isLocked && (
-                        <Lock className="size-3 lg:size-4 text-muted-foreground" />
+                        <div className="flex items-center gap-1">
+                          <Lock className="size-3 lg:size-4 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">Requires Premium</span>
+                        </div>
                       )}
                     </div>
                     <p className="text-[10px] lg:text-xs text-muted-foreground">

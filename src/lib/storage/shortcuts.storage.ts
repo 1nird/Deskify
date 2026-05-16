@@ -53,10 +53,19 @@ export const getShortcutsConfig = (): ShortcutsConfig => {
       const parsed = JSON.parse(stored);
       // Merge with defaults to ensure all default actions are present
       const defaults = getDefaultShortcutsConfig();
-      return {
+      const merged: ShortcutsConfig = {
         bindings: { ...defaults.bindings, ...parsed.bindings },
         customActions: parsed.customActions || [],
       };
+      // One-time compatibility migration for existing users on old default dashboard shortcut.
+      const dash = merged.bindings["toggle_dashboard"];
+      if (
+        dash &&
+        (dash.key === "ctrl+t" || dash.key === "cmd+t")
+      ) {
+        dash.key = defaults.bindings["toggle_dashboard"].key;
+      }
+      return merged;
     }
     return getDefaultShortcutsConfig();
   } catch (error) {

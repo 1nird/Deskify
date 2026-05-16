@@ -14,8 +14,10 @@ import {
   BotIcon,
   ClockIcon,
   ZapIcon,
+  Lock,
 } from "lucide-react";
 import { useApp } from "@/contexts";
+import { usePremium } from "@/components";
 import { safeLocalStorage } from "@/lib";
 import { STORAGE_KEYS, AUTO_SYSTEM_PROMPT } from "@/config";
 import moment from "moment";
@@ -67,6 +69,7 @@ export const DeskifyPrompts = () => {
     setSystemPrompt,
     setSupportsImages,
   } = useApp();
+  const { isPremium } = usePremium();
   const [prompts, setPrompts] = useState<DeskifyPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -294,18 +297,26 @@ export const DeskifyPrompts = () => {
           {/* Fetched/Fallback API prompts */}
           {prompts.map((prompt, index) => {
             const isSelected = isPromptSelected(prompt);
+            const isLocked = !isPremium;
             return (
               <Card
                 key={`${prompt.title}-${index}`}
-                className={`relative border lg:border-2 shadow-none p-4 pb-10 gap-0 group transition-all hover:shadow-sm cursor-pointer ${
-                  isSelected
-                    ? "!bg-primary/5 dark:!bg-primary/10 border-primary"
-                    : "!bg-black/5 dark:!bg-white/5 border-transparent"
+                className={`relative border lg:border-2 shadow-none p-4 pb-10 gap-0 group transition-all ${
+                  isLocked
+                    ? "opacity-60 cursor-not-allowed !bg-black/5 dark:!bg-white/5 border-transparent"
+                    : `${
+                        isSelected
+                          ? "!bg-primary/5 dark:!bg-primary/10 border-primary"
+                          : "!bg-black/5 dark:!bg-white/5 border-transparent"
+                      } cursor-pointer hover:shadow-sm`
                 }`}
-                onClick={() => handleCardClick(prompt)}
+                onClick={() => !isLocked && handleCardClick(prompt)}
               >
-                {isSelected && (
+                {isSelected && !isLocked && (
                   <CheckCircle2 className="size-5 text-green-500 flex-shrink-0 absolute top-2 right-2" />
+                )}
+                {isLocked && (
+                  <Lock className="size-5 text-muted-foreground flex-shrink-0 absolute top-2 right-2" />
                 )}
                 <CardHeader className="p-0 pb-0 select-none">
                   <div className="flex items-start justify-between gap-2 relative">
@@ -401,46 +412,56 @@ export const DeskifyPrompts = () => {
         })()}
 
         {/* Fetched API prompts */}
-        {prompts.map((prompt, index) => {
-          const isSelected = isPromptSelected(prompt);
-          return (
-            <Card
-              key={`${prompt.title}-${index}`}
-              className={`relative border lg:border-2 shadow-none p-4 pb-10 gap-0 group transition-all hover:shadow-sm cursor-pointer ${
-                isSelected
-                  ? "!bg-primary/5 dark:!bg-primary/10 border-primary"
-                  : "!bg-black/5 dark:!bg-white/5 border-transparent"
-              }`}
-              onClick={() => handleCardClick(prompt)}
-            >
-              {isSelected && (
-                <CheckCircle2 className="size-5 text-green-500 flex-shrink-0 absolute top-2 right-2" />
-              )}
-              <CardHeader className="p-0 pb-0 select-none">
-                <div className="flex items-start justify-between gap-2 relative">
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-[10px] text-base line-clamp-1 flex-1 pr-3">
-                        {prompt.title}
-                      </CardTitle>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 pb-4">
+          {prompts.map((prompt, index) => {
+            const isSelected = isPromptSelected(prompt);
+            const isLocked = !isPremium;
+            return (
+              <Card
+                key={`${prompt.title}-${index}`}
+                className={`relative border lg:border-2 shadow-none p-4 pb-10 gap-0 group transition-all hover:shadow-sm ${
+                  isLocked
+                    ? "opacity-60 cursor-not-allowed !bg-black/5 dark:!bg-white/5 border-transparent"
+                    : `cursor-pointer ${
+                        isSelected
+                          ? "!bg-primary/5 dark:!bg-primary/10 border-primary"
+                          : "!bg-black/5 dark:!bg-white/5 border-transparent"
+                      }`
+                } ${!isLocked ? "hover:shadow-sm" : ""}`}
+                onClick={() => !isLocked && handleCardClick(prompt)}
+              >
+                {isSelected && !isLocked && (
+                  <CheckCircle2 className="size-5 text-green-500 flex-shrink-0 absolute top-2 right-2" />
+                )}
+                {isLocked && (
+                  <Lock className="size-5 text-muted-foreground flex-shrink-0 absolute top-2 right-2" />
+                )}
+                <CardHeader className="p-0 pb-0 select-none">
+                  <div className="flex items-start justify-between gap-2 relative">
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-[10px] text-base line-clamp-1 flex-1 pr-3">
+                          {prompt.title}
+                        </CardTitle>
+                      </div>
+                      <CardDescription className="h-14 line-clamp-3 text-xs leading-relaxed">
+                        {prompt.prompt}
+                      </CardDescription>
                     </div>
-                    <CardDescription className="h-14 line-clamp-3 text-xs leading-relaxed">
-                      {prompt.prompt}
-                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <div className="absolute bottom-2 left-4 w-full flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] lg:text-xs text-muted-foreground select-none">
+                    <BotIcon className="size-3" />
+                    <span className="line-clamp-1 max-w-[180px]">
+                      {prompt.modelName}
+                    </span>
                   </div>
                 </div>
-              </CardHeader>
-              <div className="absolute bottom-2 left-4 w-full flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[10px] lg:text-xs text-muted-foreground select-none">
-                  <BotIcon className="size-3" />
-                  <span className="line-clamp-1 max-w-[180px]">
-                    {prompt.modelName}
-                  </span>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

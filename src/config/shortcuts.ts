@@ -47,9 +47,9 @@ export const DEFAULT_SHORTCUT_ACTIONS: ShortcutAction[] = [
     name: "Show Dashboard",
     description: "Toggle the main dashboard window",
     defaultKey: {
-      macos: "cmd+t",
-      windows: "ctrl+t",
-      linux: "ctrl+t",
+      macos: "cmd+g",
+      windows: "ctrl+g",
+      linux: "ctrl+g",
     },
   },
 ];

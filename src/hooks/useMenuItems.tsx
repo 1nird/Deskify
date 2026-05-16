@@ -4,23 +4,22 @@ import {
   WandSparkles,
   SquareSlashIcon,
   MonitorIcon,
-
   PowerIcon,
-  MailIcon,
   GlobeIcon,
-  BugIcon,
+  ArrowUpCircleIcon,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GithubIcon, InstagramIcon, TikTokIcon } from "@/components";
 
-export const useMenuItems = () => {
+export const useMenuItems = (isPremium?: boolean) => {
   const menu: {
     icon: React.ElementType;
     label: string;
     href: string;
     count?: number;
+    action?: () => void;
+    className?: string;
   }[] = [
-
     {
       icon: MessagesSquare,
       label: "Chats",
@@ -49,17 +48,21 @@ export const useMenuItems = () => {
     },
   ];
 
-  const footerItems = [
-    {
-      icon: MailIcon,
-      label: "Contact Support",
-      href: "mailto:support@deskify.site",
-    },
-    {
-      icon: BugIcon,
-      label: "Report a Bug",
-      href: "https://github.com/deskify/deskify/issues/new?template=bug-report.yml",
-    },
+  if (isPremium === false) {
+    menu.push({
+      icon: ArrowUpCircleIcon,
+      label: "Upgrade to Premium",
+      href: "#",
+      className: "text-emerald-500 hover:bg-emerald-500/10 font-bold",
+    });
+  }
+
+  const footerItems: {
+    icon: React.ElementType;
+    label: string;
+    href?: string;
+    action?: () => Promise<void> | void;
+  }[] = [
     {
       icon: PowerIcon,
       label: "Quit Deskify",

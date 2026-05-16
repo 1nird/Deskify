@@ -1,11 +1,12 @@
 import { useTheme } from "@/contexts";
 import { Header, Label, Slider, Button } from "@/components";
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { MonitorIcon, MoonIcon, SunIcon, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  PremiumGate,
 } from "@/components";
 
 export const Theme = () => {
@@ -79,27 +80,32 @@ export const Theme = () => {
 
       {/* Transparency Slider */}
       <div className={`space-y-2`}>
-        <Header
-          title="Window Transparency"
-          description="Adjust the transparency level of the application window"
-        />
-        <div className="space-y-3">
-          <div className="flex items-center gap-4 mt-4">
-            <Slider
-              value={[transparency]}
-              onValueChange={(value: number[]) => onSetTransparency(value[0])}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-          </div>
-
-          <p className="text-xs text-muted-foreground/70">
-            💡 Tip: Higher transparency lets you see through the window, perfect
-            for dark overlay. Changes apply immediately.
-          </p>
+        <div className="flex items-center gap-2">
+          <Header
+            title="Window Transparency"
+            description="Adjust the transparency level of the application window"
+          />
+          <Lock className="size-4 text-muted-foreground" />
         </div>
+        <PremiumGate featureName="Window Transparency" mode="inline">
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 mt-4">
+              <Slider
+                value={[transparency]}
+                onValueChange={(value: number[]) => onSetTransparency(value[0])}
+                min={0}
+                max={100}
+                step={1}
+                className="flex-1"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground/70">
+              💡 Tip: Higher transparency lets you see through the window, perfect
+              for dark overlay. Changes apply immediately.
+            </p>
+          </div>
+        </PremiumGate>
       </div>
     </div>
   );

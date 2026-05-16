@@ -13,3 +13,5 @@ export * from "./Markdown/copy-button";
 export * from "./Icons";
 export * from "./Logo";
 export * from "./Header/UserProfile";
+export * from "./PremiumGate";
+export * from "./ModelSelector";

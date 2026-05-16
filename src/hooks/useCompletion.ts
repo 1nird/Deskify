@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useWindowResize } from "./useWindow";
 import { useGlobalShortcuts } from "@/hooks";
+import { useSelectedModel } from "@/components";
 import {
   CREDITS_PER_MESSAGE,
   ENABLE_CREDIT_SYSTEM,
@@ -74,6 +75,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
   } = useApp();
   const { } = useAuth();
   const globalShortcuts = useGlobalShortcuts();
+  const selectedModel = useSelectedModel();
 
   const [state, setState] = useState<CompletionState>({
     input: "",
@@ -272,6 +274,19 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
           };
         });
 
+        // Build enhanced system prompt with model information
+        let enhancedSystemPrompt = systemPrompt || "";
+        
+        // Check if a premium model is selected
+        const isPremiumModel = selectedModel.id !== "gemini-3-flash";
+        if (isPremiumModel) {
+          // Add model-specific instructions for premium models
+          enhancedSystemPrompt += `\n\nIMPORTANT: You are currently using the ${selectedModel.name} model. When users ask what model you are, respond with: "I'm ${selectedModel.name}". Take your time to reason through problems thoroughly and provide the most accurate, well-thought-out responses. Use extended thinking and reasoning steps where beneficial. Provide deep analysis and comprehensive solutions.`;
+        } else {
+          // For free model, add standard instruction about model identity
+          enhancedSystemPrompt += `\n\nIMPORTANT: When users ask what model you are, respond with: "I'm ${selectedModel.name}".`;
+        }
+
         // Handle image attachments
         const imagesBase64: string[] = [];
         if (state.attachedFiles.length > 0) {
@@ -340,7 +355,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
             provider: useDeskifyAPI ? undefined : provider,
             selectedProvider: selectedAIProvider,
             allAiProviders,
-            systemPrompt: systemPrompt || undefined,
+            systemPrompt: enhancedSystemPrompt || undefined,
             history: messageHistory,
             userMessage: input,
             imagesBase64,
