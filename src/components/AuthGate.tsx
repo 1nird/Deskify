@@ -148,7 +148,7 @@ export const AuthGate = ({ children }: Props) => {
 
   if (updateAvailable) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm pointer-events-auto">
         <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)] backdrop-blur-3xl">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative">
@@ -160,7 +160,7 @@ export const AuthGate = ({ children }: Props) => {
                 A new version of Deskify is ready. Click below to download and install.
               </p>
             </div>
-            <Button onClick={applyUpdate} className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white">
+            <Button onClick={applyUpdate} className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white pointer-events-auto">
               Update Now
             </Button>
           </div>
