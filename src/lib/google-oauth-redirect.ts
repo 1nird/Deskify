@@ -85,7 +85,9 @@ function parseBoolean(value: string | null): boolean | undefined {
 function decodeBase64Url(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-  return atob(padded);
+  const binaryString = atob(padded);
+  const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 function parseJwtPayload(token: string): Record<string, unknown> | null {
