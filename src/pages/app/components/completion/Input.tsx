@@ -1,10 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageSquareText } from "lucide-react";
 import {
   Input as InputComponent,
+  Button,
 } from "@/components";
 import { UseCompletionReturn } from "@/types";
-import { MessageHistory } from "./MessageHistory";
 import {
   formatShortcutKeyForDisplay,
   getShortcutsConfig,
@@ -20,13 +20,10 @@ export const Input = ({
   handlePaste,
   currentConversationId,
   conversationHistory,
-  startNewConversation,
-  handleDeleteCurrentConversation,
   messageHistoryOpen,
   setMessageHistoryOpen,
   inputRef,
   isHidden,
-  isChatPanelExpanded,
 }: UseCompletionReturn & {
   isHidden: boolean;
   isChatPanelExpanded: boolean;
@@ -72,15 +69,21 @@ export const Input = ({
 
         {hasThread && !isLoading && (
           <div className="absolute inset-y-0 right-1 flex items-center">
-            <MessageHistory
-              conversationHistory={conversationHistory}
-              currentConversationId={currentConversationId}
-              onStartNewConversation={startNewConversation}
-              onDeleteConversation={handleDeleteCurrentConversation}
-              messageHistoryOpen={messageHistoryOpen}
-              setMessageHistoryOpen={setMessageHistoryOpen}
-              isChatPanelExpanded={isChatPanelExpanded}
-            />
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setMessageHistoryOpen(!messageHistoryOpen)}
+              className={cn(
+                "relative h-7 min-w-[3.5rem] shrink-0 cursor-pointer gap-1 px-2 flex items-center justify-center rounded-lg text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all duration-200",
+                messageHistoryOpen && "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+              )}
+              title="Toggle chat conversation"
+            >
+              <span className="text-[11px] font-bold tabular-nums leading-none">
+                {conversationHistory.length}
+              </span>
+              <MessageSquareText className="h-3.5 w-3.5 shrink-0 opacity-90" />
+            </Button>
           </div>
         )}
 

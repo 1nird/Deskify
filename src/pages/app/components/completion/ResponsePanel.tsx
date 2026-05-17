@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { Loader2, MonitorIcon, XIcon } from "lucide-react";
+import { Loader2, MonitorIcon, XIcon, Trash2 } from "lucide-react";
 import { ScrollArea, Button, Markdown, CopyButton } from "@/components";
 import { UseCompletionReturn } from "@/types";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ export const ResponsePanel = ({
   cancel,
   scrollAreaRef,
   screenshotSent,
+  handleDeleteCurrentConversation,
 }: UseCompletionReturn) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +41,21 @@ export const ResponsePanel = ({
         </div>
         <div className="flex items-center gap-1">
           <CopyButton content={response} />
+          {!isLoading && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={async () => {
+                if (confirm("Are you sure you want to delete this conversation?")) {
+                  await handleDeleteCurrentConversation();
+                }
+              }}
+              className="cursor-pointer h-6 w-6 text-red-500/70 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="Delete conversation"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             size="icon"
             variant="ghost"

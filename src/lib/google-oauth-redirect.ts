@@ -223,6 +223,6 @@ export function parseGoogleAuthParams(): GoogleAuthResult | null {
 }
 
 export function clearOAuthFragmentFromUrl(): void {
-  const { pathname, search } = window.location;
-  window.history.replaceState(null, "", pathname + (search || ""));
+  const { pathname } = window.location;
+  window.history.replaceState(null, "", pathname);
 }

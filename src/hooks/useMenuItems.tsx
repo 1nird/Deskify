@@ -8,6 +8,7 @@ import {
   GlobeIcon,
   ArrowUpCircleIcon,
   PlayIcon,
+  Bug,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GithubIcon, InstagramIcon, TikTokIcon } from "@/components";
@@ -75,6 +76,15 @@ export const useMenuItems = (isPremium?: boolean) => {
     href?: string;
     action?: () => Promise<void> | void;
   }[] = [
+    {
+      icon: Bug,
+      label: "Report Bug / Feedback",
+      action: () => {
+        import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+          openUrl("https://deskify.site/feedback");
+        });
+      },
+    },
     {
       icon: PowerIcon,
       label: "Quit Deskify",

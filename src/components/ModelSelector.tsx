@@ -24,7 +24,7 @@ const MODELS: AIModel[] = [
   { id: "claude-sonnet-46", name: "Claude Sonnet 4.6", plan: "developer" },
   { id: "gpt-54-high", name: "GPT 5.4 High", plan: "developer" },
   { id: "kimi-k26", name: "Kimi K2.6", plan: "developer" },
-  { id: "claude-opus-46-speed", name: "Claude Opus 4.6 Speed", plan: "developer" },
+  { id: "claude-opus-46-fast", name: "Claude Opus 4.6 Fast", plan: "developer" },
 ];
 
 const MODEL_STORAGE_KEY = "selected_ai_model";

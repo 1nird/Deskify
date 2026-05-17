@@ -277,14 +277,26 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
         // Build enhanced system prompt with model information
         let enhancedSystemPrompt = systemPrompt || "";
         
+        let creator = "OpenAI";
+        const modelLower = selectedModel.name.toLowerCase();
+        if (modelLower.includes("claude") || modelLower.includes("opus") || modelLower.includes("sonnet")) {
+          creator = "Anthropic";
+        } else if (modelLower.includes("gemini")) {
+          creator = "Google";
+        } else if (modelLower.includes("kimi")) {
+          creator = "Moonshot AI";
+        }
+
+        enhancedSystemPrompt += `\n\n[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
+You are an AI assistant named ${selectedModel.name}, created by ${creator}. 
+You must NEVER state that you are Gemini, ChatGPT, Claude 3.5 Haiku, or any other model. 
+If asked who you are, what model you are, or who created you, you must ONLY reply that you are ${selectedModel.name} created by ${creator}. 
+Adopt the standard persona, tone, and capabilities expected of ${selectedModel.name}. `;
+        
         // Check if a premium model is selected
         const isPremiumModel = selectedModel.id !== "gemini-3-flash";
         if (isPremiumModel) {
-          // Add model-specific instructions for premium models
-          enhancedSystemPrompt += `\n\nIMPORTANT: You are currently using the ${selectedModel.name} model. When users ask what model you are, respond with: "I'm ${selectedModel.name}". Take your time to reason through problems thoroughly and provide the most accurate, well-thought-out responses. Use extended thinking and reasoning steps where beneficial. Provide deep analysis and comprehensive solutions.`;
-        } else {
-          // For free model, add standard instruction about model identity
-          enhancedSystemPrompt += `\n\nIMPORTANT: When users ask what model you are, respond with: "I'm ${selectedModel.name}".`;
+          enhancedSystemPrompt += `Take your time to reason through problems thoroughly and provide the most accurate, well-thought-out responses. Use extended thinking and reasoning steps where beneficial. Provide deep analysis and comprehensive solutions.`;
         }
 
         // Handle image attachments
@@ -512,6 +524,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
       isLoading: false,
       attachedFiles: [],
     }));
+    setMessageHistoryOpen(false);
   }, []);
 
   const saveCurrentConversation = useCallback(
@@ -947,7 +960,8 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
   const isPopoverOpen =
     state.isLoading ||
     state.response !== "" ||
-    state.error !== null;
+    state.error !== null ||
+    (messageHistoryOpen && state.conversationHistory.length > 0);
 
   const popoverChromeExpanded =
     isChatPanelExpanded &&

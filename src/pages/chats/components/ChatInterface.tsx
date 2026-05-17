@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown, Send, Loader2, Plus, MessageSquare, Trash2, User, PanelLeftClose, PanelLeftOpen, Lock, Sparkles, Paperclip, ExternalLink, X } from "lucide-react";
 import { safeLocalStorage } from "@/lib";
 import { fetchAIResponse } from "@/lib/functions/ai-response.function";
+import { saveConversation } from "@/lib";
 import { cn } from "@/lib/utils";
 import { Logo, Markdown } from "@/components";
 import { usePremium } from "@/components/PremiumGate";
@@ -41,7 +42,7 @@ const MODELS: AIModel[] = [
   { id: "claude-sonnet-46",     name: "Claude Sonnet 4.6",    plan: "developer", icon: "C" },
   { id: "gpt-54-high",          name: "GPT 5.4 High",         plan: "developer", icon: "⊕" },
   { id: "kimi-k26",             name: "Kimi K2.6",            plan: "developer", icon: "K" },
-  { id: "claude-opus-46-speed", name: "Claude Opus 4.6 Speed",plan: "developer", icon: "C" },
+  { id: "claude-opus-46-fast",  name: "Claude Opus 4.6 Fast", plan: "developer", icon: "C" },
 ];
 
 const MODEL_KEY = "selected_ai_model";
@@ -311,16 +312,7 @@ export const ChatInterface = () => {
 
   const createNewChat = useCallback((existingSessions?: ChatSession[]) => {
     const all = Array.isArray(existingSessions) ? existingSessions : loadSessions();
-    
-    // Check if there is already an empty chat at the top
-    if (all.length > 0 && all[0].messages.length === 0) {
-      setActiveChatId(all[0].id);
-      setMessages([]);
-      setAttachments([]);
-      safeLocalStorage.setItem(ACTIVE_CHAT_KEY, all[0].id);
-      setTimeout(() => inputRef.current?.focus(), 100);
-      return all[0].id;
-    }
+    const cleanedAll = all.filter((s) => s.messages.length > 0);
 
     const chatId = `chat-${Date.now()}`;
     const newSession: ChatSession = {
@@ -330,12 +322,13 @@ export const ChatInterface = () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    const updated = [newSession, ...all];
+    const updated = [newSession, ...cleanedAll];
     persistSessions(updated);
     setSessions(updated);
     setActiveChatId(chatId);
     setMessages([]);
     setAttachments([]);
+    setInputValue("");
     safeLocalStorage.setItem(ACTIVE_CHAT_KEY, chatId);
     setTimeout(() => inputRef.current?.focus(), 100);
     return chatId;
@@ -379,6 +372,27 @@ export const ChatInterface = () => {
     }
     persistSessions(all);
     setSessions([...all]);
+    
+    // Sync to SQLite for overlay compatibility
+    saveConversation({
+      id: chatId,
+      title,
+      messages: updatedMessages.map((m: any) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+        attachedFiles: m.attachments?.map((a: string, i: number) => ({
+          id: `${m.id}-${i}`,
+          name: `attachment-${i}.png`,
+          type: "image/png",
+          base64: a.includes(",") ? a.split(",")[1] : a,
+          size: a.length
+        }))
+      })),
+      createdAt: idx > -1 ? all[idx].createdAt : Date.now(),
+      updatedAt: Date.now()
+    }).catch(console.error);
   }, []);
 
   // ── Send message ──────────────────────────────────────────────────────────
@@ -401,8 +415,22 @@ export const ChatInterface = () => {
 
     try {
       const history = prevMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
-      const systemPrompt = `You are Deskify, an intelligent, helpful AI workspace companion. 
-You are currently providing the capabilities of ${selectedModel.name}.
+      let creator = "OpenAI";
+      const modelLower = selectedModel.name.toLowerCase();
+      if (modelLower.includes("claude") || modelLower.includes("opus") || modelLower.includes("sonnet")) {
+        creator = "Anthropic";
+      } else if (modelLower.includes("gemini")) {
+        creator = "Google";
+      } else if (modelLower.includes("kimi")) {
+        creator = "Moonshot AI";
+      }
+
+      const systemPrompt = `[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
+You are Deskify, an intelligent, helpful AI workspace companion. 
+You are currently providing the capabilities of ${selectedModel.name}, which was created by ${creator}. 
+Under no circumstances should you claim to be Gemini, ChatGPT, Claude 3.5 Haiku, or any other model. 
+If asked who you are, what model you are, or who created you, you must ONLY reply that you are ${selectedModel.name} created by ${creator}. 
+Adopt the standard persona, tone, and capabilities expected of ${selectedModel.name}. 
 Answer naturally, be helpful, and pay close attention to the chat history.`;
 
       let fullResponse = "";
@@ -644,6 +672,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
                 </button>
                 <button
                   onClick={() => {
+                    localStorage.setItem("deskify-conversation-selected", JSON.stringify({ id: activeChatId, timestamp: Date.now() }));
                     import("@tauri-apps/api/core").then(({ invoke }) => invoke("toggle_main_window"));
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-all duration-200 text-xs font-medium"
