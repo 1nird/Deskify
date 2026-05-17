@@ -230,10 +230,16 @@ export async function* fetchManagedAIResponse(
       (lastError.message.includes("API_KEY_INVALID") ||
         /api key expired/i.test(lastError.message))
     ) {
-      yield "AI Error: Your Google Gemini API key is invalid or expired. Update it in Settings > AI Provider.";
+      yield "Please check your AI API key in Settings. It appears to be invalid or expired.";
       return;
     }
-    yield `AI Error: Failed to connect to Google API. ${lastError?.message ?? "Unknown error"}`;
+    
+    if (lastError && (lastError.message.includes("429") || /quota/i.test(lastError.message))) {
+      yield "We are currently experiencing high traffic or rate limits. Please try again in a moment.";
+      return;
+    }
+
+    yield "I'm having trouble connecting to the AI service right now. Please check your network or try again later.";
     return;
   }
 
@@ -285,12 +291,11 @@ export async function* fetchManagedAIResponse(
     }
   } catch (streamErr) {
     if (signal?.aborted) return;
-    lastError = streamErr instanceof Error ? streamErr : new Error(String(streamErr));
-    yield `AI Error: Stream error. ${lastError.message}`;
+    yield "The connection was interrupted while generating a response. Please try again.";
     return;
   }
 
   if (!gotContent) {
-    yield "AI Error: Empty response from model";
+    yield "The AI did not provide a response. Please try again.";
   }
 }

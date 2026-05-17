@@ -401,7 +401,9 @@ export const ChatInterface = () => {
 
     try {
       const history = prevMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
-      const systemPrompt = `You are Deskify AI Assistant using ${selectedModel.name}. When asked what model you are, respond that you are "${selectedModel.name}".`;
+      const systemPrompt = `You are Deskify, an intelligent, helpful AI workspace companion. 
+You are currently providing the capabilities of ${selectedModel.name}.
+Answer naturally, be helpful, and pay close attention to the chat history.`;
 
       let fullResponse = "";
       for await (const chunk of fetchAIResponse({ systemPrompt, userMessage: content, history })) {
