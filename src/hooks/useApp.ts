@@ -5,6 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { safeLocalStorage, migrateLocalStorageToSQLite } from "@/lib";
 import { getShortcutsConfig } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 export const useApp = () => {
   const [isHidden, setIsHidden] = useState(false);
@@ -32,6 +33,7 @@ export const useApp = () => {
     if (updateAvailable) {
       try {
         await updateAvailable.downloadAndInstall();
+        await relaunch();
       } catch (e) {
         console.error("Update installation failed:", e);
       }

@@ -141,14 +141,10 @@ export const AuthGate = ({ children }: Props) => {
     return () => window.removeEventListener("hashchange", checkAuth);
   }, [isAuthenticated, signInWithGoogleProfile]);
 
-  if (isAuthenticated) {
-    return <>{children}</>;
-  }
-
   if (updateAvailable) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm pointer-events-auto">
-        <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)] backdrop-blur-3xl">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm pointer-events-auto border-0">
+        <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A] p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)]">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative">
               <Logo size={64} className="relative" />
@@ -159,7 +155,7 @@ export const AuthGate = ({ children }: Props) => {
                 A new version of Deskify is ready. Click below to download and install.
               </p>
             </div>
-            <Button onClick={applyUpdate} className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white pointer-events-auto">
+            <Button onClick={applyUpdate} className="mt-4 bg-emerald-500 hover:bg-emerald-600 text-white pointer-events-auto border-0">
               Update Now
             </Button>
           </div>
@@ -170,8 +166,8 @@ export const AuthGate = ({ children }: Props) => {
 
   if (versionError) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
-        <div className="w-full max-w-[420px] rounded-[32px] border border-red-500/20 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_-12px_rgba(239,68,68,0.2)] backdrop-blur-3xl">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm border-0">
+        <div className="w-full max-w-[420px] rounded-[32px] border border-red-500/20 bg-[#0A0A0A] p-8 shadow-[0_0_50px_-12px_rgba(239,68,68,0.2)]">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative">
               <div className="absolute inset-0 bg-red-500/20 blur-2xl rounded-full" />
@@ -194,10 +190,14 @@ export const AuthGate = ({ children }: Props) => {
     );
   }
 
+  if (isAuthenticated) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent border-0">
       <div
-        className="w-full max-w-[420px] rounded-[32px] border-0 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)] backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-500"
+        className="w-full max-w-[420px] rounded-[32px] border-0 bg-[#0A0A0A] p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)] animate-in fade-in zoom-in-95 duration-500"
         data-tauri-drag-region
       >
         <div className="flex flex-col items-center text-center space-y-6" data-tauri-drag-region>
