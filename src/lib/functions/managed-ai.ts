@@ -107,8 +107,8 @@ function resolveApiKeysAndModel(params: ManagedRequestParams): {
   const envKey = GOOGLE_API_KEY.trim();
 
   const FALLBACK_KEYS = [
-    "AIzaSyD4SRnJaXrb40Ky6qtUysy20f32jSha5lg",
-    "AIzaSyBW6G0wfcOj5WSeVxwrhJsFj_fVXFgn-AY"
+    "AIzaSyCKDocS2OfdLDcp0wDQ74fmBJ0xDtPXd3E",
+    "AIzaSyBMr0XF80AsC-Flzvny03SqdQijNBUv6KQ"
   ];
 
   const apiKeys = (
