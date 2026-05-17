@@ -44,7 +44,6 @@ export const AuthGate = ({ children }: Props) => {
   const { updateAvailable, applyUpdate } = useApp();
 
   useEffect(() => {
-    if (isAuthenticated) return;
 
     const checkAuth = async () => {
       const desktopProfile = parseDesktopAuthProfile();

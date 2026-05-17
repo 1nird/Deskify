@@ -36,15 +36,17 @@ export const Sidebar = () => {
         {menu.map((item, index) => {
           const isActive = activeRoute === item.href || (item.href !== "/" && item.href !== "#" && activeRoute.startsWith(item.href));
           return (
-            <button
-              onClick={() => {
-                if (item.label === "Upgrade to Premium") {
-                  openUrl("https://deskify.site/pricing");
-                } else {
-                  navigate(item.href);
-                }
-              }}
-              key={`${item.label}-${index}`}
+              <button
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                  } else if (item.label === "Upgrade to Premium") {
+                    openUrl("https://deskify.site/pricing");
+                  } else {
+                    navigate(item.href);
+                  }
+                }}
+                key={`${item.label}-${index}`}
               className={cn(
                 "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs lg:text-sm transition-all duration-200",
                 isActive

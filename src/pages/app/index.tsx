@@ -57,7 +57,7 @@ const App = () => {
         {/* Top bar — shrink hitbox to content; gaps pass clicks through to apps below */}
         <div
           data-tauri-drag-region
-          className="pointer-events-auto self-center flex w-max max-w-[min(100%,calc(100vw-16px))] items-center gap-1.5 px-3 py-1.5 rounded-3xl border border-emerald-500/20 bg-black/20 backdrop-blur-xl shadow-lg hover:bg-black/40 hover:border-emerald-500/40 hover:shadow-emerald-500/10 transition-all duration-300 cursor-move select-none z-50 group"
+          className="mt-2 pointer-events-auto self-center flex w-max max-w-[min(100%,calc(100vw-16px))] items-center gap-1.5 px-3 py-1.5 rounded-3xl border border-emerald-500/20 bg-black/20 backdrop-blur-xl shadow-lg hover:bg-black/40 hover:border-emerald-500/40 hover:shadow-emerald-500/10 transition-all duration-300 cursor-move select-none z-50 group"
         >
           <div
             className="flex items-center justify-center rounded-xl outline-none opacity-80 group-hover:opacity-100 transition-opacity"
@@ -79,6 +79,8 @@ const App = () => {
             )}
             {isChatPanelOpen ? "Hide" : "Show"}
           </button>
+
+
 
           <div className="w-px h-4 bg-emerald-500/20 mx-0.5" />
 

@@ -17,7 +17,7 @@ export const PageLayout = ({
 }) => {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="pt-8">
+      <header className="pt-8 relative z-[60]">
         <Header
           isMainTitle={isMainTitle}
           showBorder={true}

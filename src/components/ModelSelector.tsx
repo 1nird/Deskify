@@ -77,7 +77,7 @@ export const ModelSelector = () => {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 h-8 text-xs"
+          className="gap-1.5 h-8 text-xs hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:text-emerald-400 active:scale-95 transition-all duration-200"
           title="Select AI Model"
         >
           <span className="hidden sm:inline">{selectedModel.name}</span>
@@ -85,7 +85,7 @@ export const ModelSelector = () => {
           <ChevronDown className="size-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-56 rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-lg">
+      <DropdownMenuContent align="center" side="top" sideOffset={6} collisionPadding={10} className="w-52 rounded-2xl border border-white/10 bg-[#0d1117]/95 backdrop-blur-2xl shadow-2xl shadow-black/60 max-h-[240px] overflow-y-auto z-[100]">
         {/* Free Plan */}
         <div className="px-2 py-1.5">
           <p className="text-xs font-semibold text-muted-foreground">Free Plan</p>

@@ -1,14 +1,42 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/auth.context";
-import { LogOut, Settings, ChevronUp } from "lucide-react";
+import { LogOut, Settings, ChevronUp, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { start, onUrl } from "@fabianlars/tauri-plugin-oauth";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export const UserProfile = () => {
   const { googleProfile, signOut, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const refreshPlan = async () => {
+    setIsRefreshing(true);
+    try {
+      await onUrl((url: string) => {
+        const parsedUrl = new URL(url);
+        const params = parsedUrl.search || parsedUrl.hash;
+        if (params) {
+          window.location.hash = params.startsWith("#") ? params : `#${params.slice(1)}`;
+        }
+      });
+      const port = await start();
+      const websiteAuthUrl = (import.meta.env.VITE_WEBSITE_AUTH_URL ?? "").trim() || "https://deskify.site/auth";
+      const redirectUri = `http://127.0.0.1:${port}`;
+      const url = new URL(websiteAuthUrl);
+      url.searchParams.set("redirect", redirectUri);
+      url.searchParams.set("source", "desktop");
+      await openUrl(url.toString());
+    } catch (e) {
+      console.error("Failed to refresh plan:", e);
+    } finally {
+      setIsRefreshing(false);
+      setIsOpen(false);
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -79,6 +107,15 @@ export const UserProfile = () => {
           >
             <Settings className="size-4 opacity-70" />
             Settings
+          </button>
+
+          <button
+            disabled={isRefreshing}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+            onClick={refreshPlan}
+          >
+            <RefreshCw className={cn("size-4 opacity-70", isRefreshing && "animate-spin")} />
+            {isRefreshing ? "Refreshing..." : "Refresh Subscription"}
           </button>
 
           <div className="my-1 h-px bg-white/5" />

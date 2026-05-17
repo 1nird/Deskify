@@ -15,7 +15,7 @@ export function Markdown({ children }: MarkdownRendererProps) {
   return (
     <div className="markdown-body break-words">
       <ReactMarkdown
-        remarkPlugins={[remarkMath, remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: true }]]}
         components={{
           a: ({ children, href, ...props }: any) => {
@@ -67,10 +67,19 @@ export function Markdown({ children }: MarkdownRendererProps) {
                 </code>
               );
             }
+            const language = className ? className.replace('language-', '') : '';
             return (
-              <pre className="bg-black/40 rounded-lg p-3 overflow-x-auto mb-3">
-                <code className="text-xs font-mono" {...props}>{children}</code>
-              </pre>
+              <div className="rounded-xl overflow-hidden mb-3 border border-emerald-500/20 bg-black/40 shadow-lg shadow-black/20">
+                {language && (
+                  <div className="bg-emerald-500/10 px-4 py-1.5 text-[10px] text-emerald-400 font-mono uppercase tracking-wider flex items-center gap-2 border-b border-emerald-500/20">
+                    <span className="size-2 rounded-full bg-emerald-500/40" />
+                    {language}
+                  </div>
+                )}
+                <pre className="p-4 overflow-x-auto">
+                  <code className="text-xs font-mono text-emerald-100/90" {...props}>{children}</code>
+                </pre>
+              </div>
             );
           },
           h1: ({ children, ...props }: any) => (

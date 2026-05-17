@@ -7,6 +7,7 @@ import {
   PowerIcon,
   GlobeIcon,
   ArrowUpCircleIcon,
+  PlayIcon,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GithubIcon, InstagramIcon, TikTokIcon } from "@/components";
@@ -57,6 +58,17 @@ export const useMenuItems = (isPremium?: boolean) => {
     });
   }
 
+  menu.push({
+    icon: PlayIcon,
+    label: "Start Deskify",
+    href: "#",
+    action: () => {
+      window.dispatchEvent(new CustomEvent("newConversation"));
+      invoke("toggle_main_window");
+    },
+    className: "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/20 transition-all font-bold mt-2 justify-center",
+  });
+
   const footerItems: {
     icon: React.ElementType;
     label: string;
@@ -85,7 +97,7 @@ export const useMenuItems = (isPremium?: boolean) => {
     {
       title: "Github",
       icon: GithubIcon,
-      link: "https://github.com/deskify/deskify",
+      link: "https://github.com/1nird/deskify",
     },
     {
       title: "TikTok",
