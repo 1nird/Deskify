@@ -5,6 +5,7 @@ import { Button } from "@/components";
 import { useAuth } from "@/contexts/auth.context";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
@@ -29,8 +30,8 @@ export const AuthGate = ({ children }: Props) => {
     // For a real production app, you would fetch this from your API
     const checkVersion = async () => {
       try {
-        const currentVersion = "2.5.0"; // Hardcoded for this build
-        const minAllowedVersion = "2.5.0"; // Only allow v2.5+
+        const currentVersion = "3.2.0"; // Hardcoded for this build
+        const minAllowedVersion = "3.2.0"; // Only allow v3.2+
         
         if (currentVersion < minAllowedVersion) {
           setVersionError(true);
@@ -141,8 +142,8 @@ export const AuthGate = ({ children }: Props) => {
     return () => window.removeEventListener("hashchange", checkAuth);
   }, [isAuthenticated, signInWithGoogleProfile]);
 
-  // Only show the update overlay when a real update object is present.
-  if (updateAvailable && updateAvailable.downloadAndInstall) {
+  // Only show the update overlay when a real update object is present and we're in the dashboard window.
+  if (updateAvailable && updateAvailable.downloadAndInstall && getCurrentWindow().label === "dashboard") {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent pointer-events-auto border-0">
         <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A] p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)]">

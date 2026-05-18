@@ -11,11 +11,14 @@ async function deployUpdate() {
     const appDir = path.resolve(__dirname, '..');
     const websiteDir = path.resolve(appDir, '../Deskify-Website');
     
-    const updaterSource = path.join(appDir, 'src-tauri/target/release/bundle/updater');
+    const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+    const currentVersion = packageJson.version;
+    
+    const updaterSource = path.join(appDir, 'src-tauri/target/release/bundle');
     const nsisSource = path.join(appDir, 'src-tauri/target/release/bundle/nsis');
     const publicUpdateDir = path.join(websiteDir, 'public/update');
 
-    console.log('🚀 Starting deployment to website...');
+    console.log(`🚀 Starting deployment of v${currentVersion} to website...`);
 
     try {
         ensureDir(publicUpdateDir);
@@ -24,7 +27,7 @@ async function deployUpdate() {
         let installerName = '';
         if (fs.existsSync(nsisSource)) {
             const files = fs.readdirSync(nsisSource);
-            const installer = files.find(f => f.endsWith('.exe') && !f.includes('setup')); // Avoid setup.exe if it's there
+            const installer = files.find(f => f.endsWith('.exe') && f.includes(currentVersion));
             
             if (installer) {
                 installerName = 'Deskify_Setup_x64.exe';
@@ -45,7 +48,11 @@ async function deployUpdate() {
         // 2. Process and copy latest.json
         const latestJsonPath = path.join(updaterSource, 'latest.json');
         if (fs.existsSync(latestJsonPath)) {
-            const latestJson = JSON.parse(fs.readFileSync(latestJsonPath, 'utf8'));
+            let rawContent = fs.readFileSync(latestJsonPath, 'utf8');
+            if (rawContent.charCodeAt(0) === 0xFEFF) {
+                rawContent = rawContent.slice(1);
+            }
+            const latestJson = JSON.parse(rawContent);
             
             // Update URLs for each platform to point to our website
             if (latestJson.platforms) {

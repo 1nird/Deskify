@@ -112,6 +112,7 @@ const View = () => {
             title="Start a new chat"
             className="text-[10px] lg:text-sm h-6 lg:h-8"
             onClick={() => {
+              localStorage.setItem("deskify-new-conversation", String(Date.now()));
               window.dispatchEvent(new CustomEvent("newConversation"));
               import("@tauri-apps/api/core").then(({ invoke }) => {
                 invoke("toggle_main_window");

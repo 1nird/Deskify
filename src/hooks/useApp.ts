@@ -104,6 +104,7 @@ export const useApp = () => {
 
   const handleNewConversation = () => {
     // Trigger new conversation event
+    localStorage.setItem("deskify-new-conversation", String(Date.now()));
     window.dispatchEvent(new CustomEvent("newConversation"));
   };
 

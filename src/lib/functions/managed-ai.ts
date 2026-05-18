@@ -106,15 +106,10 @@ function resolveApiKeysAndModel(params: ManagedRequestParams): {
   ).trim();
   const envKey = GOOGLE_API_KEY.trim();
 
-  const FALLBACK_KEYS = [
-    "AIzaSyCKDocS2OfdLDcp0wDQ74fmBJ0xDtPXd3E",
-    "AIzaSyBMr0XF80AsC-Flzvny03SqdQijNBUv6KQ"
-  ];
-
   const apiKeys = (
     isGeminiSelected
-      ? [selectedKey, envKey, ...FALLBACK_KEYS]
-      : [envKey, ...FALLBACK_KEYS]
+      ? [selectedKey, envKey]
+      : [envKey]
   ).filter((key, index, arr) => key.length > 0 && arr.indexOf(key) === index);
 
   const modelRaw = isGeminiSelected

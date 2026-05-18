@@ -8,6 +8,7 @@ const Dashboard = () => {
   const { customizable, setCursorType } = useApp();
 
   const handleStart = () => {
+    localStorage.setItem("deskify-new-conversation", String(Date.now()));
     window.dispatchEvent(new CustomEvent("newConversation"));
     invoke("toggle_main_window");
   };

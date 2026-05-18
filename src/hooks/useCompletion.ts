@@ -657,6 +657,10 @@ Adopt the standard persona, tone, and capabilities expected of ${selectedModel.n
     };
 
     const handleStorageChange = async (e: StorageEvent) => {
+      if (e.key === "deskify-new-conversation" && e.newValue) {
+        startNewConversation();
+      }
+
       if (e.key === "deskify-conversation-deleted" && e.newValue) {
         try {
           const data = JSON.parse(e.newValue);

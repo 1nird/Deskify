@@ -64,6 +64,7 @@ export const useMenuItems = (isPremium?: boolean) => {
     label: "Start Deskify",
     href: "#",
     action: () => {
+      localStorage.setItem("deskify-new-conversation", String(Date.now()));
       window.dispatchEvent(new CustomEvent("newConversation"));
       invoke("toggle_main_window");
     },
