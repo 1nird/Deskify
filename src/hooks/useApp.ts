@@ -178,6 +178,7 @@ export const useApp = () => {
   return {
     isHidden,
     updateAvailable,
+    setUpdateAvailable,
     applyUpdate,
     handleSelectConversation,
     handleNewConversation,
