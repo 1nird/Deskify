@@ -15,29 +15,36 @@ export const useApp = () => {
   const [updateAvailable, setUpdateAvailable] = useState<any>(null);
 
   // Auto-update check on app launch
+  const checkForUpdate = async () => {
+    try {
+      const update = await check();
+      // If there is an update object, store it; otherwise clear any previous state.
+      setUpdateAvailable(update ?? null);
+    } catch (e) {
+      console.error('Update check failed:', e);
+      setUpdateAvailable(null);
+    }
+  };
+
+  // Run on mount
   useEffect(() => {
-    const checkForUpdate = async () => {
-      try {
-        const update = await check();
-        if (update) {
-          setUpdateAvailable(update);
-        }
-      } catch (e) {
-        console.error("Update check failed:", e);
-      }
-    };
     checkForUpdate();
   }, []);
 
-  const applyUpdate = async () => {
+  const applyUpdate = async (): Promise<boolean> => {
     if (updateAvailable) {
       try {
         await updateAvailable.downloadAndInstall();
         await relaunch();
+        return true;
       } catch (e) {
-        console.error("Update installation failed:", e);
+        console.error('Update installation failed:', e);
+        // Reset the update state so UI can dismiss
+        setUpdateAvailable(null);
+        return false;
       }
     }
+    return false;
   };
   // Initialize shortcuts from localStorage on app startup
   useEffect(() => {
