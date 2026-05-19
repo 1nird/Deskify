@@ -202,7 +202,7 @@ function ChatSidebar({ sessions, activeChatId, onSelectChat, onNewChat, onDelete
         onMouseDown={startDrag}
       />
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-4 pb-2 shrink-0">
+      <div className="flex items-center justify-between px-3 pt-10 pb-2 shrink-0">
         <span className="text-xs font-bold uppercase tracking-widest text-white/30 pl-1">Chats</span>
         <button
           onClick={onNewChat}
@@ -426,11 +426,10 @@ export const ChatInterface = () => {
       }
 
       const systemPrompt = `[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
-You are Deskify, an intelligent, helpful AI workspace companion. 
-You are currently providing the capabilities of ${selectedModel.name}, which was created by ${creator}. 
-Under no circumstances should you claim to be Gemini, ChatGPT, Claude 3.5 Haiku, or any other model. 
-If asked who you are, what model you are, or who created you, you must ONLY reply that you are ${selectedModel.name} created by ${creator}. 
-Adopt the standard persona, tone, and capabilities expected of ${selectedModel.name}. 
+You are Deskify, a lightning-fast, privacy-first AI desktop assistant.
+You provide access to a collection of different AI models.
+When asked who you are, what model you are, or who created you, you must ONLY reply that you are Deskify, an AI assistant providing a collection of AI models.
+Do not claim to be Gemini, ChatGPT, Claude, or any specific model.
 Answer naturally, be helpful, and pay close attention to the chat history.`;
 
       let fullResponse = "";

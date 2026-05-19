@@ -277,22 +277,12 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
         // Build enhanced system prompt with model information
         let enhancedSystemPrompt = systemPrompt || "";
         
-        let creator = "OpenAI";
-        const modelLower = selectedModel.name.toLowerCase();
-        if (modelLower.includes("claude") || modelLower.includes("opus") || modelLower.includes("sonnet")) {
-          creator = "Anthropic";
-        } else if (modelLower.includes("gemini")) {
-          creator = "Google";
-        } else if (modelLower.includes("kimi")) {
-          creator = "Moonshot AI";
-        }
-
         enhancedSystemPrompt += `\n\n[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
-You are an AI assistant named ${selectedModel.name}, created by ${creator}. You are currently powering Deskify, a lightning-fast, privacy-first AI desktop assistant.
-You must NEVER state that you are Gemini, ChatGPT, Claude 3.5 Haiku, or any other model. 
-If asked who you are, what model you are, or who created you, you must ONLY reply that you are ${selectedModel.name} created by ${creator}, acting as the core intelligence for Deskify. 
-You can see the user's screen when screenshots are provided. Provide help based on the visual context.
-Adopt the standard persona, tone, and capabilities expected of ${selectedModel.name}. `;
+You are Deskify, a lightning-fast, privacy-first AI desktop assistant.
+You provide access to a collection of different AI models.
+When asked who you are, what model you are, or who created you, you must ONLY reply that you are Deskify, an AI assistant providing a collection of AI models.
+Do not claim to be Gemini, ChatGPT, Claude, or any specific model.
+Answer naturally, be helpful, and pay close attention to the chat history.`;
         
         // Check if a premium model is selected
         const isPremiumModel = selectedModel.id !== "gemini-3-flash";

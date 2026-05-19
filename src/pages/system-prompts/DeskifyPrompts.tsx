@@ -211,8 +211,16 @@ export const DeskifyPrompts = () => {
   };
 
   const handleCardClick = (prompt: DeskifyPrompt) => {
-    if (isPromptSelected(prompt) && prompt.title !== AUTO_PROMPT.title) {
-      handleSelectDeskifyPrompt(AUTO_PROMPT);
+    if (isPromptSelected(prompt)) {
+      if (prompt.title === AUTO_PROMPT.title) {
+        // Deselect auto prompt completely
+        setSystemPrompt("");
+        setSelectedDeskifyPrompt(null);
+        safeLocalStorage.removeItem(SELECTED_DESKIFY_PROMPT_STORAGE_KEY);
+        safeLocalStorage.removeItem(STORAGE_KEYS.SYSTEM_PROMPT);
+      } else {
+        handleSelectDeskifyPrompt(AUTO_PROMPT);
+      }
     } else {
       handleSelectDeskifyPrompt(prompt);
     }

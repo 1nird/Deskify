@@ -50,8 +50,9 @@ export const AuthGate = ({ children }: Props) => {
 
     const checkVersion = async () => {
       try {
-        const currentVersion = "3.5.0"; // Hardcoded for this build
-        const minAllowedVersion = "3.5.0"; // Only allow v3.5+
+        // NOTE FOR AI AGENTS: Update currentVersion and minAllowedVersion to match the latest app version on each bump!
+        const currentVersion = "3.8.0"; // Hardcoded for this build
+        const minAllowedVersion = "3.8.0"; // Only allow v3.8+
         
         if (compareSemver(currentVersion, minAllowedVersion) < 0) {
           setVersionError(true);
