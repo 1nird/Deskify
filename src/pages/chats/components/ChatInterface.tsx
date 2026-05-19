@@ -195,7 +195,7 @@ function ChatSidebar({ sessions, activeChatId, onSelectChat, onNewChat, onDelete
         "relative flex flex-col h-full bg-[#0a0f14]/60 backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden shrink-0",
         collapsed ? "opacity-0 pointer-events-none border-transparent" : "opacity-100 border-r border-white/8"
       )}
-      style={{ width: collapsed ? 0 : width }}
+      style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width }}
     >
       <div 
         className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-emerald-500/50 z-10 transition-colors"

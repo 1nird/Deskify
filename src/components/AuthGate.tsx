@@ -28,12 +28,32 @@ export const AuthGate = ({ children }: Props) => {
   useEffect(() => {
     // Version Lock: Check if this version is allowed to run
     // For a real production app, you would fetch this from your API
+    const compareSemver = (left: string, right: string) => {
+      const toParts = (value: string) =>
+        value
+          .split(".")
+          .map((part) => Number.parseInt(part, 10))
+          .map((part) => (Number.isNaN(part) ? 0 : part));
+
+      const leftParts = toParts(left);
+      const rightParts = toParts(right);
+      const maxLength = Math.max(leftParts.length, rightParts.length);
+
+      for (let i = 0; i < maxLength; i += 1) {
+        const l = leftParts[i] ?? 0;
+        const r = rightParts[i] ?? 0;
+        if (l > r) return 1;
+        if (l < r) return -1;
+      }
+      return 0;
+    };
+
     const checkVersion = async () => {
       try {
-        const currentVersion = "3.2.0"; // Hardcoded for this build
-        const minAllowedVersion = "3.2.0"; // Only allow v3.2+
+        const currentVersion = "3.5.0"; // Hardcoded for this build
+        const minAllowedVersion = "3.5.0"; // Only allow v3.5+
         
-        if (currentVersion < minAllowedVersion) {
+        if (compareSemver(currentVersion, minAllowedVersion) < 0) {
           setVersionError(true);
         }
       } catch (e) {
@@ -195,7 +215,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v2.5.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v3.5.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">

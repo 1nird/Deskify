@@ -662,7 +662,7 @@ fn handle_focus_input<R: Runtime>(app: &AppHandle<R>) {
 
         let _ = window.set_focus();
         let _ = window.emit("focus-text-input", json!({}));
-        let _ = window.emit("trigger-screen-selection", json!({}));
+        let _ = window.emit("trigger-screenshot", json!({}));
     }
 }
 

@@ -39,8 +39,6 @@ export const useApp = () => {
         return true;
       } catch (e) {
         console.error('Update installation failed:', e);
-        // Reset the update state so UI can dismiss
-        setUpdateAvailable(null);
         return false;
       }
     }
