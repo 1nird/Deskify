@@ -17,12 +17,15 @@ export const DashboardLayout = () => {
     >
       {/* Outer: pass-through; inner: actual UI hitbox (rectangular; rounded look is visual only) */}
       <div className="flex h-screen w-screen items-center justify-center bg-transparent p-3 pointer-events-none">
-        <div className="relative flex h-full w-full max-h-full max-w-full flex-col overflow-hidden rounded-xl border-0 bg-background shadow-2xl shadow-black/60 pointer-events-auto">
+        <div className="relative flex h-full w-full max-h-full max-w-full flex-col overflow-hidden rounded-xl border-0 bg-background pointer-events-auto">
 
-          {/* Title-bar drag region — sits above everything */}
           <div
-            className="absolute left-0 right-0 top-0 z-50 h-10 select-none"
+            className="absolute left-64 right-32 top-0 z-50 h-10 select-none"
             data-tauri-drag-region
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           />
 
           {/* Window control buttons */}

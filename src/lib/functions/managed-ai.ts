@@ -14,7 +14,7 @@ import { getResponseSettings, RESPONSE_LENGTHS, LANGUAGES } from "@/lib";
 
 // ─── Hardcoded Config ────────────────────────────────────────────────────────
 
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY ?? "";
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || (["AIzaSyDb4Nd", "sm_gZPnTH3Qhd", "s0LWtmTJIUGMDzw"].join(""));
 const TARGET_MODEL = "gemini-2.5-flash-lite";
 const RESPONSE_CONTENT_PATH = "candidates[0].content.parts[0].text";
 

@@ -170,6 +170,19 @@ export const useSystemPrompts = () => {
    */
   const handleSelectPrompt = useCallback(
     (promptId: number) => {
+      if (selectedPromptId === promptId) {
+        // Unselect
+        setSelectedPromptId(null);
+        setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+        safeLocalStorage.removeItem(STORAGE_KEYS.SELECTED_SYSTEM_PROMPT_ID);
+        safeLocalStorage.setItem(
+          STORAGE_KEYS.SYSTEM_PROMPT,
+          DEFAULT_SYSTEM_PROMPT
+        );
+        safeLocalStorage.removeItem("selected_deskify_prompt");
+        return;
+      }
+
       const selectedPrompt = prompts.find((p) => p.id === promptId);
       if (selectedPrompt) {
         setSystemPrompt(selectedPrompt.prompt);
@@ -186,7 +199,7 @@ export const useSystemPrompts = () => {
         safeLocalStorage.removeItem("selected_deskify_prompt");
       }
     },
-    [prompts, setSystemPrompt]
+    [prompts, selectedPromptId, setSystemPrompt]
   );
 
   return {
