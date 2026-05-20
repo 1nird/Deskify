@@ -74,7 +74,7 @@ export const AuthGate = ({ children }: Props) => {
     };
     checkVersion();
   }, []);
-  const { updateAvailable, setUpdateAvailable, applyUpdate } = useApp();
+  const { updateAvailable, applyUpdate } = useApp();
 
   useEffect(() => {
 
