@@ -2,7 +2,6 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Deskify",
   "version": "4.0.0",
-  "//NOTE": "CRITICAL: When bumping version, also update version in package.json and src-tauri/Cargo.toml!",
   "identifier": "com.deskify.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
