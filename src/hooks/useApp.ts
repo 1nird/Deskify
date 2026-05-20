@@ -32,16 +32,42 @@ export const useApp = () => {
   }, []);
 
   const applyUpdate = async (): Promise<boolean> => {
+    console.log("[Updater] Starting update installation...");
+    try {
+      // Method 1: Fresh check to avoid React proxy / state-binding unbinding issues
+      console.log("[Updater] Method 1: Checking for fresh update instance...");
+      const freshUpdate = await check();
+      if (freshUpdate) {
+        console.log("[Updater] Fresh update instance found! Downloading and installing...");
+        await freshUpdate.downloadAndInstall((event) => {
+          console.log("[Updater] progress event:", event);
+        });
+        console.log("[Updater] Download and install complete. Relaunching...");
+        await relaunch();
+        return true;
+      } else {
+        console.warn("[Updater] Fresh check returned null.");
+      }
+    } catch (e) {
+      console.error("[Updater] Method 1 fresh update attempt failed:", e);
+    }
+
+    // Method 2: Fallback to the state-held update object if fresh check didn't work
     if (updateAvailable) {
       try {
-        await updateAvailable.downloadAndInstall();
+        console.log("[Updater] Method 2: Falling back to state-held update object...");
+        // Re-bind to ensure context isn't lost
+        const boundFn = updateAvailable.downloadAndInstall.bind(updateAvailable);
+        await boundFn();
+        console.log("[Updater] Fallback install complete. Relaunching...");
         await relaunch();
         return true;
       } catch (e) {
-        console.error('Update installation failed:', e);
-        return false;
+        console.error("[Updater] Method 2 fallback update attempt failed:", e);
       }
     }
+
+    console.error("[Updater] Both update methods failed. Check permissions or network.");
     return false;
   };
   // Initialize shortcuts from localStorage on app startup

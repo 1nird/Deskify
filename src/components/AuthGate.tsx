@@ -32,7 +32,7 @@ type Props = {
 };
 
 export const AuthGate = ({ children }: Props) => {
-  const { isAuthenticated, signInWithGoogleProfile } = useAuth();
+  const { isAuthenticated, signInWithGoogleProfile, googleProfile } = useAuth();
   const [oauthBusy, setOauthBusy] = useState(false);
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
   const [versionError, setVersionError] = useState<boolean>(false);
@@ -74,7 +74,7 @@ export const AuthGate = ({ children }: Props) => {
     };
     checkVersion();
   }, []);
-  const { updateAvailable, applyUpdate } = useApp();
+  const { updateAvailable, applyUpdate, setUpdateAvailable } = useApp();
 
   useEffect(() => {
 
@@ -189,20 +189,26 @@ export const AuthGate = ({ children }: Props) => {
                 A new version of Deskify is ready. Click below to download and install.
               </p>
             </div>
-            <div className="flex gap-3 w-full justify-center mt-4">
+            <div className="flex flex-col items-center gap-3 w-full mt-4">
               <Button
                 onClick={async () => {
                   const success = await applyUpdate();
                   if (!success) {
-                    // If the update failed, keep the modal open for user to retry or skip.
-                    console.warn('Update failed – user can retry or skip.');
+                    console.warn('Update failed.');
                   }
                 }}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
               >
                 Update Now
               </Button>
-// Removed skip button as per requirement
+              {googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
+                <Button
+                  onClick={() => setUpdateAvailable(null)}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-0 cursor-pointer rounded-full h-10 font-medium flex items-center justify-center"
+                >
+                  Skip for Now
+                </Button>
+              )}
             </div>
           </div>
         </div>
