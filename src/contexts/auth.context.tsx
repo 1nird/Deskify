@@ -106,6 +106,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Real-time automatic background subscription checking
+  useEffect(() => {
+    const syncSubscription = async () => {
+      const persisted = readPersistedAuth();
+      if (!persisted || persisted.mode !== "google" || !persisted.googleProfile?.email) return;
+
+      const email = persisted.googleProfile.email;
+      try {
+        console.log(`Checking real-time subscription status for: ${email}`);
+        const response = await fetch(`https://arqpulsablelhhbtyhyj.supabase.co/functions/v1/deskify?email=${encodeURIComponent(email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          const currentGp = persisted.googleProfile;
+          if (currentGp.isPaid !== data.isPaid || currentGp.plan !== data.plan) {
+            console.log(`Real-time plan change detected: isPaid=${data.isPaid}, plan=${data.plan}`);
+            const updatedProfile = {
+              ...currentGp,
+              isPaid: data.isPaid,
+              plan: data.plan,
+            };
+            
+            // Save to localStorage
+            writePersistedAuth({ mode: "google", googleProfile: updatedProfile });
+            
+            // Sync React states
+            setGoogleProfile(updatedProfile);
+            setUser({
+              email: updatedProfile.email,
+              name: updatedProfile.name || updatedProfile.email,
+              picture: updatedProfile.picture,
+              isPaid: updatedProfile.isPaid,
+              plan: updatedProfile.plan,
+              source: updatedProfile.source,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to check real-time subscription in background:", e);
+      }
+    };
+
+    // Run 2 seconds after mount to ensure it is completely non-blocking
+    const timer = setTimeout(syncSubscription, 2000);
+    return () => clearTimeout(timer);
+  }, [setUser]);
+
   const signInWithGoogleProfile = useCallback(
     (profile: GoogleProfile) => {
       writePersistedAuth({ mode: "google", googleProfile: profile });
