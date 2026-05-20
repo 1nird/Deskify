@@ -202,12 +202,7 @@ export const AuthGate = ({ children }: Props) => {
               >
                 Update Now
               </Button>
-              <Button
-                onClick={() => setUpdateAvailable(null)}
-                className="flex-1 border border-zinc-800 bg-transparent hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer"
-              >
-                Skip for Now
-              </Button>
+// Removed skip button as per requirement
             </div>
           </div>
         </div>
