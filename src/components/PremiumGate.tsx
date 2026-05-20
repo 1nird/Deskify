@@ -11,14 +11,27 @@ type PremiumGateProps = {
   mode?: "modal" | "inline";
 };
 
+export const DEV_EMAILS = [
+  "nirdeshbar@gmail.com",
+  "aarya.vaishnav111@gmail.com",
+  "aarya.vaishnav17@gmail.com",
+  "siddhantm167@gmail.com",
+];
+
 export const usePremium = () => {
   const { user } = useApp();
   
+  const isDevEmail = !!(user?.email && DEV_EMAILS.includes(user.email.toLowerCase()));
+  
   // Check if user has any paid plan (student or developer)
-  const isPremium = user?.isPaid === true || (user?.plan && user.plan !== "free");
+  const isPremium = isDevEmail || user?.isPaid === true || (!!user?.plan && user.plan !== "free" && user.plan !== "");
   
   // Check specific plan tier
-  const userPlan = user?.plan?.toLowerCase() || "free";
+  const rawPlan = isDevEmail ? "developer" : (user?.plan?.toLowerCase() || "free");
+  
+  // Normalize plan tier to base tier
+  const userPlan = rawPlan.includes("developer") ? "developer" : rawPlan.includes("student") ? "student" : rawPlan;
+  
   const isStudent = userPlan === "student";
   const isDeveloper = userPlan === "developer";
   

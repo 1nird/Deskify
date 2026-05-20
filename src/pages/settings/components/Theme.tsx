@@ -7,10 +7,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   PremiumGate,
+  usePremium,
 } from "@/components";
 
 export const Theme = () => {
   const { theme, transparency, setTheme, onSetTransparency } = useTheme();
+  const { isPremium } = usePremium();
 
   return (
     <div id="theme" className="relative space-y-3">
@@ -85,7 +87,7 @@ export const Theme = () => {
             title="Window Transparency"
             description="Adjust the transparency level of the application window"
           />
-          <Lock className="size-4 text-muted-foreground" />
+          {!isPremium && <Lock className="size-4 text-muted-foreground" />}
         </div>
         <PremiumGate featureName="Window Transparency" mode="inline">
           <div className="space-y-3">

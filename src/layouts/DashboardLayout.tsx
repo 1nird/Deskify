@@ -20,7 +20,7 @@ export const DashboardLayout = () => {
         <div className="relative flex h-full w-full max-h-full max-w-full flex-col overflow-hidden rounded-xl border-0 bg-background pointer-events-auto">
 
           <div
-            className="absolute left-64 right-32 top-0 z-50 h-10 select-none"
+            className="absolute left-64 right-32 top-0 z-[70] h-10 select-none"
             data-tauri-drag-region
             onDoubleClick={(e) => {
               e.preventDefault();
