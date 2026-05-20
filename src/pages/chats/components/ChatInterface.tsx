@@ -202,7 +202,7 @@ function ChatSidebar({ sessions, activeChatId, onSelectChat, onNewChat, onDelete
         onMouseDown={startDrag}
       />
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-10 pb-2 shrink-0">
+      <div className="flex items-center justify-between px-3 pt-4 pb-2 shrink-0">
         <span className="text-xs font-bold uppercase tracking-widest text-white/30 pl-1">Chats</span>
         <button
           onClick={onNewChat}
@@ -506,7 +506,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-transparent">
+    <div className="flex h-full w-full overflow-hidden bg-transparent pt-10">
       {/* ── Chat history sidebar ── */}
       <ChatSidebar
         sessions={sessions}
