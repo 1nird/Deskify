@@ -415,15 +415,6 @@ export const ChatInterface = () => {
 
     try {
       const history = prevMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
-      let creator = "OpenAI";
-      const modelLower = selectedModel.name.toLowerCase();
-      if (modelLower.includes("claude") || modelLower.includes("opus") || modelLower.includes("sonnet")) {
-        creator = "Anthropic";
-      } else if (modelLower.includes("gemini")) {
-        creator = "Google";
-      } else if (modelLower.includes("kimi")) {
-        creator = "Moonshot AI";
-      }
 
       const systemPrompt = `[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
 You are Deskify, a lightning-fast, privacy-first AI desktop assistant.
