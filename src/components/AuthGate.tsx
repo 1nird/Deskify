@@ -12,6 +12,18 @@ import {
   parseGoogleAuthParams,
 } from "@/lib/google-oauth-redirect";
 
+import { getAppVersion } from "@/lib";
+
+// NOTE: For future AI-driven version bumps, we fetch the app version at runtime via Tauri's API.
+// This ensures the dashboard always reflects the current version without manual code changes.
+
+// Version Lock: Check if this version is allowed to run
+// The version is retrieved asynchronously from the Tauri backend.
+// Minimum allowed version is defined below.
+
+// Inside checkVersion we now await getAppVersion() instead of using a static import.
+
+
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 const websiteAuthUrl = (import.meta.env.VITE_WEBSITE_AUTH_URL ?? "").trim();
 
@@ -50,9 +62,8 @@ export const AuthGate = ({ children }: Props) => {
 
     const checkVersion = async () => {
       try {
-        // NOTE FOR AI AGENTS: Update currentVersion and minAllowedVersion to match the latest app version on each bump!
-        const currentVersion = "4.0.0"; // Hardcoded for this build
-        const minAllowedVersion = "4.0.0"; // Only allow v4.0+
+        const currentVersion = await getAppVersion();
+        const minAllowedVersion = "4.0.0"; // Minimum version threshold
         
         if (compareSemver(currentVersion, minAllowedVersion) < 0) {
           setVersionError(true);
