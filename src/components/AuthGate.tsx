@@ -36,6 +36,7 @@ export const AuthGate = ({ children }: Props) => {
   const [oauthBusy, setOauthBusy] = useState(false);
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
   const [versionError, setVersionError] = useState<boolean>(false);
+  const [loadingUpdate, setLoadingUpdate] = useState<boolean>(false);
 
   useEffect(() => {
     // Version Lock: Check if this version is allowed to run
@@ -176,9 +177,9 @@ export const AuthGate = ({ children }: Props) => {
 
   // Only show the update overlay when a real update object is present and we're in the dashboard window.
   if (updateAvailable && updateAvailable.downloadAndInstall && getCurrentWindow().label === "dashboard") {
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent pointer-events-auto border-0">
-        <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A] p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)]">
+      return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent pointer-events-auto border-0">
+          <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A] backdrop-filter backdrop-blur-lg bg-opacity-70 p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)]">
           <div className="flex flex-col items-center text-center space-y-6">
             <div className="relative">
               <Logo size={64} className="relative" />
@@ -190,17 +191,26 @@ export const AuthGate = ({ children }: Props) => {
               </p>
             </div>
             <div className="flex flex-col items-center gap-3 w-full mt-4">
-              <Button
-                onClick={async () => {
-                  const success = await applyUpdate();
-                  if (!success) {
-                    console.warn('Update failed.');
-                  }
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
-              >
-                Update Now
-              </Button>
+                <Button
+                  onClick={async () => {
+                    setLoadingUpdate(true);
+                    const success = await applyUpdate();
+                    setLoadingUpdate(false);
+                    if (!success) {
+                      console.warn('Update failed.');
+                    }
+                  }}
+                  disabled={loadingUpdate}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
+                >
+                  {loadingUpdate ? (
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                  ) : null}
+                  Update Now
+                </Button>
               {googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
                 <Button
                   onClick={() => setUpdateAvailable(null)}
@@ -228,7 +238,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v4.4.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v4.5.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">
