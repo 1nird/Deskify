@@ -530,8 +530,41 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
           </div>
         </div>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        {/* ── Chat tabs (multi‑chat) ── */}
+      <div className="flex gap-2 overflow-x-auto border-b border-white/8 bg-[#0a0f14]/30 px-2 py-1">
+        {sessions.map(session => {
+          const isActive = session.id === activeChatId;
+          return (
+            <button
+              key={session.id}
+              onClick={() => selectChat(session.id)}
+              className={cn(
+                "flex items-center gap-1 px-2 py-0.5 rounded-t-lg text-xs",
+                isActive ? "bg-emerald-500/20 text-white" : "bg-white/5 text-white/70 hover:bg-white/10"
+              )}
+            >
+              <span>{session.title}</span>
+              <button
+                onClick={e => { e.stopPropagation(); deleteChat(session.id); }}
+                className="ml-1 text-white/40 hover:text-red-400"
+                title="Close chat"
+              >
+                <X className="size-3" />
+              </button>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => createNewChat()}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-t-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400"
+          title="New chat"
+        >
+          <Plus className="size-3" />
+          <span>New</span>
+        </button>
+      </div>
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center select-none animate-in fade-in duration-500">
               <div className="size-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-inner mb-2">
