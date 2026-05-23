@@ -7,10 +7,12 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/api/shell";
+import {
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
   parseGoogleAuthParams,
 } from "@/lib/google-oauth-redirect";
+
 
 import { getAppVersion } from "@/lib";
 
