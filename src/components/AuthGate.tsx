@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/auth.context";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/api/shell";
+import { shell } from "@tauri-apps/api";
 import {
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
@@ -197,7 +197,7 @@ export const AuthGate = ({ children }: Props) => {
   onClick={async () => {
     const url = 'https://github.com/1nird/Deskify/releases/latest';
     setLoadingUpdate(true);
-    await open(url);
+      await shell.open(url);
     setLoadingUpdate(false);
   }}
   disabled={loadingUpdate}
