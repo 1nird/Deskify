@@ -192,7 +192,7 @@ function ChatSidebar({ sessions, activeChatId, onSelectChat, onNewChat, onDelete
   return (
     <div 
       className={cn(
-        "relative flex flex-col h-full bg-white/10 backdrop-blur-xl border border-white/15 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden shrink-0",
+        "relative flex flex-col h-full bg-transparent transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden shrink-0",
         collapsed ? "opacity-0 pointer-events-none border-transparent" : "opacity-100 border-r border-white/8"
       )}
       style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width }}

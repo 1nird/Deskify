@@ -195,10 +195,18 @@ export const AuthGate = ({ children }: Props) => {
             <div className="flex flex-col items-center gap-3 w-full mt-4">
 <Button
   onClick={async () => {
-    const url = 'https://github.com/1nird/Deskify/releases/latest';
-    setLoadingUpdate(true);
-    await openUrl(url);
-    setLoadingUpdate(false);
+    try {
+      setLoadingUpdate(true);
+      await updateAvailable.downloadAndInstall();
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } catch (e) {
+      console.error("Failed to install update automatically:", e);
+      const url = 'https://github.com/1nird/Deskify/releases/latest';
+      await openUrl(url);
+    } finally {
+      setLoadingUpdate(false);
+    }
   }}
   disabled={loadingUpdate}
   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
@@ -238,7 +246,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v4.8.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v5.0.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">
