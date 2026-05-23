@@ -192,7 +192,7 @@ function ChatSidebar({ sessions, activeChatId, onSelectChat, onNewChat, onDelete
   return (
     <div 
       className={cn(
-        "relative flex flex-col h-full bg-[#0a0f14]/60 backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden shrink-0",
+        "relative flex flex-col h-full bg-white/10 backdrop-blur-xl border border-white/15 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden shrink-0",
         collapsed ? "opacity-0 pointer-events-none border-transparent" : "opacity-100 border-r border-white/8"
       )}
       style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width }}
@@ -497,7 +497,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-transparent pt-10">
+    <div className="flex h-full w-full overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 pt-10">
       {/* ── Chat history sidebar ── */}
       <ChatSidebar
         sessions={sessions}
@@ -531,7 +531,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
         </div>
 
         {/* ── Chat tabs (multi‑chat) ── */}
-      <div className="flex gap-2 overflow-x-auto border-b border-white/8 bg-[#0a0f14]/30 px-2 py-1">
+      <div className="flex gap-2 overflow-x-auto border-b border-white/8 bg-[#0a0f14]/70 backdrop-blur-xl px-2 py-1">
         {sessions.map(session => {
           const isActive = session.id === activeChatId;
           return (
@@ -539,8 +539,8 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
               key={session.id}
               onClick={() => selectChat(session.id)}
               className={cn(
-                "flex items-center gap-1 px-2 py-0.5 rounded-t-lg text-xs",
-                isActive ? "bg-emerald-500/20 text-white" : "bg-white/5 text-white/70 hover:bg-white/10"
+                "flex items-center gap-1 px-2 py-0.5 rounded-t-lg text-xs transition-all duration-200",
+                isActive ? "bg-emerald-500/30 text-white" : "bg-emerald-500/10 text-white/70 hover:bg-emerald-500/20"
               )}
             >
               <span>{session.title}</span>
