@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/auth.context";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
+import { open } from "@tauri-apps/api/shell";
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
   parseGoogleAuthParams,
@@ -75,7 +75,7 @@ export const AuthGate = ({ children }: Props) => {
     };
     checkVersion();
   }, []);
-  const { updateAvailable, applyUpdate, setUpdateAvailable } = useApp();
+  const { updateAvailable, setUpdateAvailable } = useApp();
 
   useEffect(() => {
 
@@ -191,27 +191,24 @@ export const AuthGate = ({ children }: Props) => {
               </p>
             </div>
             <div className="flex flex-col items-center gap-3 w-full mt-4">
-                <Button
-                  onClick={async () => {
-                    const url = 'https://github.com/1nird/Deskify/releases/latest';
-                    try {
-                      const { open } = await import('@tauri-apps/api/shell');
-                      await open(url);
-                    } catch (e) {
-                      console.error('Failed to open URL', e);
-                    }
-                  }}
-                  disabled={loadingUpdate}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
-                >
-                  {loadingUpdate ? (
-                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                    </svg>
-                  ) : null}
-                  Update Now
-                </Button>
+<Button
+  onClick={async () => {
+    const url = 'https://github.com/1nird/Deskify/releases/latest';
+    setLoadingUpdate(true);
+    await open(url);
+    setLoadingUpdate(false);
+  }}
+  disabled={loadingUpdate}
+  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
+>
+  {loadingUpdate ? (
+    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  ) : null}
+  Update Now
+</Button>
               {googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
                 <Button
                   onClick={() => setUpdateAvailable(null)}
@@ -239,7 +236,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v4.6.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v4.7.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">
