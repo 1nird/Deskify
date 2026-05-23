@@ -109,28 +109,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Real-time automatic background subscription checking
   useEffect(() => {
     const syncSubscription = async () => {
+      // Always re-read from localStorage so we get the latest persisted state
       const persisted = readPersistedAuth();
       if (!persisted || persisted.mode !== "google" || !persisted.googleProfile?.email) return;
 
       const email = persisted.googleProfile.email;
       try {
-        console.log(`Checking real-time subscription status for: ${email}`);
-        const response = await fetch(`https://arqpulsablelhhbtyhyj.supabase.co/functions/v1/deskify?email=${encodeURIComponent(email)}`);
+        console.log(`Checking subscription status for: ${email}`);
+        const response = await fetch(
+          `https://arqpulsablelhhbtyhyj.supabase.co/functions/v1/deskify?email=${encodeURIComponent(email)}`,
+          { cache: "no-store" }
+        );
         if (response.ok) {
           const data = await response.json();
           const currentGp = persisted.googleProfile;
+
+          // Always overwrite — the Supabase endpoint is the source of truth.
+          // This ensures a stale `isPaid:true` baked into the sign-in token is
+          // corrected even if the cached localStorage value hasn't changed yet.
+          const updatedProfile = {
+            ...currentGp,
+            isPaid: data.isPaid,
+            plan: data.plan,
+          };
+
+          // Persist the authoritative values
+          writePersistedAuth({ mode: "google", googleProfile: updatedProfile });
+
+          // Only trigger a React re-render if something actually changed
           if (currentGp.isPaid !== data.isPaid || currentGp.plan !== data.plan) {
-            console.log(`Real-time plan change detected: isPaid=${data.isPaid}, plan=${data.plan}`);
-            const updatedProfile = {
-              ...currentGp,
-              isPaid: data.isPaid,
-              plan: data.plan,
-            };
-            
-            // Save to localStorage
-            writePersistedAuth({ mode: "google", googleProfile: updatedProfile });
-            
-            // Sync React states
+            console.log(`Subscription change detected: isPaid=${data.isPaid}, plan=${data.plan}`);
             setGoogleProfile(updatedProfile);
             setUser({
               email: updatedProfile.email,
@@ -143,13 +151,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       } catch (e) {
-        console.warn("Failed to check real-time subscription in background:", e);
+        console.warn("Failed to check subscription status:", e);
       }
     };
 
-    // Run 2 seconds after mount to ensure it is completely non-blocking
-    const timer = setTimeout(syncSubscription, 2000);
-    return () => clearTimeout(timer);
+    // Run shortly after mount
+    const initialTimer = setTimeout(syncSubscription, 1500);
+    // Then re-check every 5 minutes while the app is open
+    const interval = setInterval(syncSubscription, 5 * 60 * 1000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [setUser]);
 
   const signInWithGoogleProfile = useCallback(
@@ -167,6 +181,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         plan: profile.plan,
         source: profile.source,
       });
+
+      // Immediately verify subscription status from backend to avoid stale
+      // isPaid values baked into the auth token at time of login.
+      (async () => {
+        try {
+          const res = await fetch(
+            `https://arqpulsablelhhbtyhyj.supabase.co/functions/v1/deskify?email=${encodeURIComponent(profile.email)}`,
+            { cache: "no-store" }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const verified: GoogleProfile = { ...profile, isPaid: data.isPaid, plan: data.plan };
+            writePersistedAuth({ mode: "google", googleProfile: verified });
+            setGoogleProfile(verified);
+            setUser({
+              email: verified.email,
+              name: verified.name || verified.email,
+              picture: verified.picture,
+              isPaid: verified.isPaid,
+              plan: verified.plan,
+              source: verified.source,
+            });
+          }
+        } catch {
+          // Non-fatal — the periodic sync will correct it later
+        }
+      })();
     },
     [setCredits, setLastRefresh, setUser]
   );
