@@ -238,7 +238,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v4.7.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v4.8.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">

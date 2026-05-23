@@ -497,7 +497,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 pt-10">
+    <div className="flex h-full w-full overflow-hidden bg-background pt-10">
       {/* ── Chat history sidebar ── */}
       <ChatSidebar
         sessions={sessions}
