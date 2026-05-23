@@ -81,6 +81,7 @@ jobs:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
           VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
         with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
           tagName: app-v__VERSION__
           releaseName: "Deskify v__VERSION__"
           releaseBody: "Download binaries for your OS. macOS users: If blocked, go to System Settings > Privacy & Security > Security section, find 'deskify was blocked' message, click 'Allow Anyway', then reopen the app."
