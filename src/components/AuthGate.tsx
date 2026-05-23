@@ -193,11 +193,12 @@ export const AuthGate = ({ children }: Props) => {
             <div className="flex flex-col items-center gap-3 w-full mt-4">
                 <Button
                   onClick={async () => {
-                    setLoadingUpdate(true);
-                    const success = await applyUpdate();
-                    setLoadingUpdate(false);
-                    if (!success) {
-                      console.warn('Update failed.');
+                    const url = 'https://github.com/1nird/Deskify/releases/latest';
+                    try {
+                      const { open } = await import('@tauri-apps/api/shell');
+                      await open(url);
+                    } catch (e) {
+                      console.error('Failed to open URL', e);
                     }
                   }}
                   disabled={loadingUpdate}
