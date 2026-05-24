@@ -1065,7 +1065,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
               setState((prev) => ({
                 ...prev,
                 error:
-                  "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen & System Audio Recording. If you don't see Deskify in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
+                  "Screen Recording permission required. Please enable it by going to System Settings > Privacy & Security > Screen Recording. If you don't see Deskify in the list, click the '+' button to add it. If it's already listed, make sure it's enabled. Then restart the app.",
               }));
               setIsScreenshotLoading(false);
               screenshotInitiatedByThisContext.current = false;

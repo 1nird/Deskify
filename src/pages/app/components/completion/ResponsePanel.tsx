@@ -108,12 +108,16 @@ export const ResponsePanel = ({
           {micOpen && !isLoading && (
             <div className="bg-emerald-500/10 border-l-2 border-emerald-500 rounded-lg px-3 py-2 text-sm">
               <div className="flex items-center gap-2 mb-1">
+                <span className="relative flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                   You
                 </span>
-                <span className="text-[10px] text-white/25">Listening…</span>
+                <span className="text-[10px] text-emerald-300/60 font-medium">Speaking…</span>
               </div>
-              <p className="text-white/80 text-sm">{input.trim() || "…"}</p>
+              <p className="text-white/90 text-sm leading-relaxed">{input.trim() || "…"}</p>
             </div>
           )}
 

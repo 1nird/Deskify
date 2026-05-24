@@ -108,7 +108,7 @@ pub fn handle_shortcut_action<R: Runtime>(app: &AppHandle<R>, action_id: &str) {
         "move_window_right" => handle_move_window(app, "right"),
         "audio_recording" => handle_audio_shortcut(app),
         "screenshot" => handle_screenshot_shortcut(app),
-        "system_audio" => handle_system_audio_shortcut(app),
+
         custom_action => {
             // Emit custom action event for frontend to handle
             if let Some(window) = app.get_webview_window("main") {
@@ -303,26 +303,7 @@ fn handle_screenshot_shortcut<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Handle system audio shortcut
-fn handle_system_audio_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
-        // Ensure window is visible
-        if let Ok(false) = window.is_visible() {
-            if let Err(e) = window.show() {
-                eprintln!("Failed to show window: {}", e);
-                return;
-            }
-            if let Err(e) = window.set_focus() {
-                eprintln!("Failed to focus window: {}", e);
-            }
-        }
 
-        // Emit event to toggle system audio capture - frontend will determine current state
-        if let Err(e) = window.emit("toggle-system-audio", json!({})) {
-            eprintln!("Failed to emit system audio event: {}", e);
-        }
-    }
-}
 
 /// Tauri command to get all registered shortcuts
 #[tauri::command]

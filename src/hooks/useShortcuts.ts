@@ -4,7 +4,7 @@ import { useGlobalShortcuts } from "./useGlobalShortcuts";
 interface UseShortcutsProps {
   onAudioRecording?: () => void;
   onScreenshot?: () => void;
-  onSystemAudio?: () => void;
+
   customShortcuts?: Record<string, () => void>;
 }
 
@@ -15,13 +15,13 @@ interface UseShortcutsProps {
 export const useShortcuts = ({
   onAudioRecording,
   onScreenshot,
-  onSystemAudio,
+
   customShortcuts = {},
 }: UseShortcutsProps = {}) => {
   const {
     registerAudioCallback,
     registerScreenshotCallback,
-    registerSystemAudioCallback,
+
     registerCustomShortcutCallback,
     unregisterCustomShortcutCallback,
   } = useGlobalShortcuts();
@@ -39,11 +39,7 @@ export const useShortcuts = ({
     }
   }, [onScreenshot, registerScreenshotCallback]);
 
-  useEffect(() => {
-    if (onSystemAudio) {
-      registerSystemAudioCallback(onSystemAudio);
-    }
-  }, [onSystemAudio, registerSystemAudioCallback]);
+
 
   // Register custom shortcut callbacks
   useEffect(() => {

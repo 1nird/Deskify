@@ -7,6 +7,7 @@ import { getShortcutsConfig } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+
 export const useApp = () => {
   const [isHidden, setIsHidden] = useState(false);
   // Initialize title management
@@ -34,40 +35,27 @@ export const useApp = () => {
   const applyUpdate = async (): Promise<boolean> => {
     console.log("[Updater] Starting update installation...");
     try {
-      // Method 1: Fresh check to avoid React proxy / state-binding unbinding issues
-      console.log("[Updater] Method 1: Checking for fresh update instance...");
       const freshUpdate = await check();
       if (freshUpdate) {
-        console.log("[Updater] Fresh update instance found! Downloading and installing...");
+        console.log(`[Updater] Update ${freshUpdate.version} found — downloading…`);
         await freshUpdate.downloadAndInstall((event) => {
-          console.log("[Updater] progress event:", event);
+          if (event.event === "Started") {
+            console.log("[Updater] Download started...");
+          } else if (event.event === "Progress") {
+            console.log(`[Updater] Download progress: ${JSON.stringify(event)}`);
+          } else if (event.event === "Finished") {
+            console.log("[Updater] Download complete, installing...");
+          }
         });
-        console.log("[Updater] Download and install complete. Relaunching...");
+        console.log("[Updater] Install staged — relaunching…");
         await relaunch();
         return true;
-      } else {
-        console.warn("[Updater] Fresh check returned null.");
       }
     } catch (e) {
-      console.error("[Updater] Method 1 fresh update attempt failed:", e);
+      console.error("[Updater] Auto-update failed:", e);
     }
 
-    // Method 2: Fallback to the state-held update object if fresh check didn't work
-    if (updateAvailable) {
-      try {
-        console.log("[Updater] Method 2: Falling back to state-held update object...");
-        // Re-bind to ensure context isn't lost
-        const boundFn = updateAvailable.downloadAndInstall.bind(updateAvailable);
-        await boundFn();
-        console.log("[Updater] Fallback install complete. Relaunching...");
-        await relaunch();
-        return true;
-      } catch (e) {
-        console.error("[Updater] Method 2 fallback update attempt failed:", e);
-      }
-    }
-
-    console.error("[Updater] Both update methods failed. Check permissions or network.");
+    console.log("[Updater] Auto-update unavailable — no update to apply.");
     return false;
   };
   // Initialize shortcuts from localStorage on app startup

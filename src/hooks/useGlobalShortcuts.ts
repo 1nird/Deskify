@@ -8,7 +8,6 @@ let globalEventListeners: {
   focus?: UnlistenFn;
   audio?: UnlistenFn;
   screenshot?: UnlistenFn;
-  systemAudio?: UnlistenFn;
   customShortcut?: UnlistenFn;
   registrationError?: UnlistenFn;
 } = {};
@@ -22,7 +21,7 @@ let globalAudioCallback: (() => void) | null = null;
 let globalScreenshotCallback:
   | ((mode?: "default" | "selection") => void | Promise<void>)
   | null = null;
-let globalSystemAudioCallback: (() => void) | null = null;
+
 let globalCustomShortcutCallbacks: Map<string, () => void> = new Map();
 
 export const useGlobalShortcuts = () => {
@@ -31,7 +30,7 @@ export const useGlobalShortcuts = () => {
   const screenshotCallbackRef = useRef<
     ((mode?: "default" | "selection") => void | Promise<void>) | null
   >(null);
-  const systemAudioCallbackRef = useRef<(() => void) | null>(null);
+
   const customShortcutCallbacksRef = useRef<Map<string, () => void>>(new Map());
 
   const checkShortcutsRegistered = useCallback(async (): Promise<boolean> => {
@@ -91,11 +90,7 @@ export const useGlobalShortcuts = () => {
     []
   );
 
-  // Register system audio callback
-  const registerSystemAudioCallback = useCallback((callback: () => void) => {
-    systemAudioCallbackRef.current = callback;
-    globalSystemAudioCallback = callback;
-  }, []);
+
 
   // Register custom shortcut callback
   const registerCustomShortcutCallback = useCallback(
@@ -136,13 +131,6 @@ export const useGlobalShortcuts = () => {
             globalEventListeners.screenshot();
           } catch (error) {
             console.warn("Error cleaning up screenshot listener:", error);
-          }
-        }
-        if (globalEventListeners.systemAudio) {
-          try {
-            globalEventListeners.systemAudio();
-          } catch (error) {
-            console.warn("Error cleaning up system audio listener:", error);
           }
         }
         if (globalEventListeners.customShortcut) {
@@ -247,13 +235,7 @@ export const useGlobalShortcuts = () => {
           unlistenSelectionScreenshot();
         };
 
-        // Listen for system audio toggle event
-        const unlistenSystemAudio = await listen("toggle-system-audio", () => {
-          if (globalSystemAudioCallback) {
-            globalSystemAudioCallback();
-          }
-        });
-        globalEventListeners.systemAudio = unlistenSystemAudio;
+
 
         // Listen for custom shortcut events
         const unlistenCustomShortcut = await listen<{ action: string }>(
@@ -297,7 +279,6 @@ export const useGlobalShortcuts = () => {
     registerInputRef,
     registerAudioCallback,
     registerScreenshotCallback,
-    registerSystemAudioCallback,
     registerCustomShortcutCallback,
     unregisterCustomShortcutCallback,
   };

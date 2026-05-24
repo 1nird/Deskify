@@ -55,7 +55,7 @@
     },
     "updater": {
       "active": true,
-      "endpoints": ["https://github.com/1nird/Deskify/releases/latest/download/latest.json"],
+      "endpoints": ["https://deskify.site/update/latest.json"],
       "pubkey": "deskify.key.pub",
       "dialog": false
     }

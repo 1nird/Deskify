@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Mic, MicOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useLiveTranscription } from "@/hooks";
 import { cn } from "@/lib/utils";
+
+const SILENCE_TIMEOUT_MS = 1800;
 
 type MicButtonProps = {
   onTranscript: (text: string) => void;
@@ -41,17 +43,59 @@ export const MicButton = ({
 
   const wasListeningRef = useRef(false);
   const [autoSend, setAutoSend] = useState(false);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTranscriptRef = useRef("");
+
+  // Silence detection: auto-stop & send when transcript stops changing
+  useEffect(() => {
+    if (!isListening || !autoSend || !transcript.trim()) return;
+
+    // Clear previous timer
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
+
+    // Only set timer if transcript changed
+    if (transcript !== lastTranscriptRef.current) {
+      lastTranscriptRef.current = transcript;
+      silenceTimerRef.current = setTimeout(() => {
+        // Silence detected — stop and let the on-end handler auto-send
+        stop();
+      }, SILENCE_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, [isListening, autoSend, transcript, stop]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const wasListening = wasListeningRef.current;
     if (wasListening && !isListening) {
       const finalText = transcript.trim();
+      // Clear any pending silence timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       if (!error && finalText && autoSend && onAutoSend) {
         onAutoSend(finalText);
       } else if (!error && finalText) {
         onTranscript(finalText);
       }
       reset();
+      lastTranscriptRef.current = "";
     }
     wasListeningRef.current = isListening;
   }, [autoSend, error, isListening, onAutoSend, onTranscript, reset, transcript]);
@@ -73,14 +117,15 @@ export const MicButton = ({
     return "";
   }, [error, isListening, transcript]);
 
-  const handleToggle = () => {
+  const handleToggle = useCallback(() => {
     if (disabled) return;
     if (isListening) {
       stop();
     } else {
+      lastTranscriptRef.current = "";
       start();
     }
-  };
+  }, [disabled, isListening, stop, start]);
 
   const micTitle = !isSupported
     ? "Speech recognition isn't supported in this environment"

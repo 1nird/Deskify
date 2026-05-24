@@ -112,14 +112,6 @@ chmod +x deskify-2.0.0-x86_64.AppImage
 
 Pluely operates with complete stealth during sensitive scenarios. The application features a translucent overlay window that sits above all other applications, making it invisible in video calls, screen shares, and recordings. The window is designed to be screenshot-proof and undetectable in meeting platforms like Zoom, Google Meet, Microsoft Teams, and Slack Huddles. When sharing your screen or recording, Pluely remains invisible to your audience while providing you with real-time AI assistance.
 
-## System Audio Capture
-
-Capture and transcribe system audio in real-time. The system audio feature allows you to record audio directly from your computer's output, perfect for meetings, presentations, or any audio playing on your system. The captured audio is processed through your selected speech-to-text provider and can be automatically sent to the AI for analysis or transcription.
-
-**Keyboard Shortcut:** `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
-
-The system audio capture includes voice activity detection, real-time audio visualization, and automatic processing status indicators. Configure your preferred audio input devices in the Audio Settings page.
-
 ## Voice Input
 
 Record your voice and convert it to text using advanced speech-to-text providers. The voice input feature supports multiple STT providers including OpenAI Whisper, ElevenLabs, Groq Whisper, and custom providers. Voice activity detection automatically identifies when you're speaking and processes your audio accordingly.
@@ -236,7 +228,7 @@ Configure screenshot capture behavior with granular control:
 
 ## Audio Settings
 
-Configure audio input and output devices for voice interaction and system audio capture. Select your preferred microphone for voice recording and configure system audio capture devices. The page displays all available audio devices detected by your system with real-time device status.
+Configure your preferred microphone for voice recording. The page displays all available audio devices detected by your system with real-time device status.
 
 ## Cursor & Shortcuts
 
@@ -254,7 +246,6 @@ Manage cursor visibility and customize keyboard shortcuts:
 - **Toggle Window:** Show or hide the main overlay window (Default: `Cmd+\` / `Ctrl+\`)
 - **Refocus Input Box:** Bring Pluely forward and focus the input area (Default: `Cmd+Shift+I` / `Ctrl+Shift+I`)
 - **Move Window:** Hold modifier key and use arrow keys to move the overlay window continuously (Default: `Cmd` / `Ctrl`)
-- **System Audio:** Toggle system audio capture on or off (Default: `Cmd+Shift+M` / `Ctrl+Shift+M`)
 - **Voice Input:** Start voice recording for speech-to-text (Default: `Cmd+Shift+A` / `Ctrl+Shift+A`)
 - **Screenshot:** Capture screenshot using configured mode (Default: `Cmd+Shift+S` / `Ctrl+Shift+S`)
 
@@ -402,7 +393,7 @@ Built on Tauri, Pluely runs as a native application using your system's webview.
 
 **Efficient Resource Usage:**
 
-The application typically uses less than 50MB of RAM during normal operation. System audio capture, voice recording, and screenshot processing are optimized for performance. Multiple conversations, attached files, and chat history don't slow down the application.
+The application typically uses less than 50MB of RAM during normal operation. Voice recording and screenshot processing are optimized for performance. Multiple conversations, attached files, and chat history don't slow down the application.
 
 **Cross-Platform:**
 
@@ -438,7 +429,7 @@ Pluely sits quietly on your desktop, consuming minimal resources while remaining
 
 **One-Click Access:**
 
-Use keyboard shortcuts to instantly show or hide the window, open the dashboard, start voice recording, capture screenshots, or toggle system audio. The overlay window is always available when you need it and out of sight when you don't.
+Use keyboard shortcuts to instantly show or hide the window, open the dashboard, start voice recording, or capture screenshots. The overlay window is always available when you need it and out of sight when you don't.
 
 **Persistent History:**
 
