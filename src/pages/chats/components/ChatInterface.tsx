@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown, Send, Loader2, Plus, MessageSquare, Trash2, User, PanelLeftClose, PanelLeftOpen, Lock, Sparkles, Paperclip, ExternalLink, X } from "lucide-react";
-import { safeLocalStorage } from "@/lib";
+import { safeLocalStorage, getActiveSystemPrompt } from "@/lib";
 import { fetchAIResponse } from "@/lib/functions/ai-response.function";
 import { saveConversation } from "@/lib";
 import { cn } from "@/lib/utils";
-import { Logo, Markdown } from "@/components";
+import { Logo, Markdown, MicButton } from "@/components";
 import { usePremium } from "@/components/PremiumGate";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -416,7 +416,10 @@ export const ChatInterface = () => {
     try {
       const history = prevMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-      const systemPrompt = `[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
+      const baseSystemPrompt = getActiveSystemPrompt();
+      const systemPrompt = `${baseSystemPrompt}
+
+[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
 You are Deskify, a lightning-fast, privacy-first AI desktop assistant.
 You provide access to a collection of different AI models.
 When asked who you are, what model you are, or who created you, you must ONLY reply that you are Deskify, an AI assistant providing a collection of AI models.
@@ -685,6 +688,18 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
                   selected={selectedModel}
                   onSelect={handleSelectModel}
                   userPlan={userPlan}
+                />
+                <MicButton
+                  onTranscript={(text) => {
+                    setInputValue((prev) =>
+                      prev ? `${prev.trimEnd()} ${text}` : text
+                    );
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                  }}
+                  disabled={isLoading}
+                  buttonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
+                  menuButtonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
+                  previewPosition="top"
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}

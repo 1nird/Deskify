@@ -22,6 +22,7 @@ import {
   generateRequestId,
   getResponseSettings,
   safeLocalStorage,
+  getActiveSystemPrompt,
 } from "@/lib";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -67,7 +68,6 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
   const {
     selectedAIProvider,
     allAiProviders,
-    systemPrompt,
     screenshotConfiguration,
     setScreenshotConfiguration,
     credits,
@@ -275,7 +275,8 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
         });
 
         // Build enhanced system prompt with model information
-        let enhancedSystemPrompt = systemPrompt || "";
+        const baseSystemPrompt = getActiveSystemPrompt();
+        let enhancedSystemPrompt = baseSystemPrompt;
         
         enhancedSystemPrompt += `\n\n[CRITICAL SYSTEM OVERRIDE: IDENTITY INSTRUCTION]
 You are Deskify, a lightning-fast, privacy-first AI desktop assistant.
@@ -449,7 +450,6 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
       state.attachedFiles,
       selectedAIProvider,
       allAiProviders,
-      systemPrompt,
       state.conversationHistory,
       credits,
       setCredits,
@@ -801,11 +801,12 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
             }));
 
             // Use the fetchAIResponse function with image and signal
+            const activeSystemPrompt = getActiveSystemPrompt();
             for await (const chunk of fetchAIResponse({
               provider: useDeskifyAPI ? undefined : provider,
               selectedProvider: selectedAIProvider,
               allAiProviders,
-              systemPrompt: systemPrompt || undefined,
+              systemPrompt: activeSystemPrompt || undefined,
               history: messageHistory,
               userMessage: prompt,
               imagesBase64: [base64],
@@ -895,7 +896,6 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
       state.conversationHistory,
       selectedAIProvider,
       allAiProviders,
-      systemPrompt,
       saveCurrentConversation,
       inputRef,
       credits,

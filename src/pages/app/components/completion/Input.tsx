@@ -3,6 +3,7 @@ import { Loader2, MessageSquareText } from "lucide-react";
 import {
   Input as InputComponent,
   Button,
+  MicButton,
 } from "@/components";
 import { UseCompletionReturn } from "@/types";
 import {
@@ -49,6 +50,13 @@ export const Input = ({
 
   const hasThread =
     Boolean(currentConversationId) && conversationHistory.length > 0;
+  const handleTranscript = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const nextValue = input ? `${input.trimEnd()} ${trimmed}` : trimmed;
+    setInput(nextValue);
+    inputRef.current?.focus();
+  };
 
   return (
     <div className="relative flex-1">
@@ -63,12 +71,19 @@ export const Input = ({
           disabled={isLoading || isHidden}
           className={cn(
             "h-8 min-h-8 py-1 text-sm transition-all duration-200 hover:border-emerald-500/40",
-            hasThread ? "pr-[4.75rem]" : "pr-9"
+            hasThread ? "pr-[6.5rem]" : "pr-[3.75rem]"
           )}
         />
 
-        {hasThread && !isLoading && (
-          <div className="absolute inset-y-0 right-1 flex items-center">
+        <div className="absolute inset-y-0 right-1 flex items-center gap-1">
+          <MicButton
+            onTranscript={handleTranscript}
+            disabled={isLoading || isHidden}
+            buttonClassName="h-7 w-7"
+            menuButtonClassName="h-7 w-7"
+            showPreview={false}
+          />
+          {hasThread && !isLoading && (
             <Button
               size="icon"
               variant="ghost"
@@ -84,14 +99,11 @@ export const Input = ({
               </span>
               <MessageSquareText className="h-3.5 w-3.5 shrink-0 opacity-90" />
             </Button>
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="absolute inset-y-0 right-2 flex items-center">
+          )}
+          {isLoading && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

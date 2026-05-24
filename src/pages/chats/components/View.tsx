@@ -3,6 +3,7 @@ import {
   Card,
   Empty,
   Button,
+  MicButton,
   Markdown,
   Textarea,
 } from "@/components";
@@ -76,6 +77,16 @@ const View = () => {
   const handleDelete = async () => {
     await confirmDelete();
     navigate(-1);
+  };
+
+  const handleTranscript = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const nextValue = completion.input
+      ? `${completion.input.trimEnd()} ${trimmed}`
+      : trimmed;
+    completion.setInput(nextValue);
+    setTimeout(() => completion.inputRef.current?.focus(), 0);
   };
 
   return (
@@ -272,13 +283,21 @@ const View = () => {
                 <Textarea
                   ref={completion.inputRef}
                   placeholder="Type a message..."
-                  className="pr-12 pl-2 resize-none pb-12 pt-3"
+                  className="pr-20 pl-2 resize-none pb-12 pt-3"
                   rows={2}
                   value={completion.input}
                   onChange={(e) => completion.setInput(e.target.value)}
                   onKeyDown={completion.handleKeyPress}
                   onPaste={completion.handlePaste}
                   disabled={completion.isLoading}
+                />
+                <MicButton
+                  onTranscript={handleTranscript}
+                  disabled={completion.isLoading}
+                  className="absolute right-11 bottom-2"
+                  buttonClassName="size-7 lg:size-9 rounded-lg lg:rounded-xl hover:bg-muted/60"
+                  menuButtonClassName="size-7 lg:size-9 rounded-lg lg:rounded-xl hover:bg-muted/60"
+                  previewPosition="top"
                 />
                 <Button
                   size="icon"

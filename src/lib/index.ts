@@ -1,6 +1,7 @@
 export * from "./storage";
 export * from "./version";
 export * from "./functions";
+export * from "./system-prompt";
 export * from "./curl-validator";
 export * from "./platform-instructions";
 export * from "./database";

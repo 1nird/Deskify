@@ -15,6 +15,7 @@ import {
   generateMessageId,
   generateRequestId,
   getResponseSettings,
+  getActiveSystemPrompt,
 } from "@/lib";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -60,7 +61,6 @@ export const useChatCompletion = (
   const {
     selectedAIProvider,
     allAiProviders,
-    systemPrompt,
     screenshotConfiguration,
     setScreenshotConfiguration,
     credits,
@@ -259,7 +259,7 @@ export const useChatCompletion = (
             provider: useDeskifyAPI ? undefined : provider,
             selectedProvider: selectedAIProvider,
             allAiProviders,
-            systemPrompt: systemPrompt || undefined,
+            systemPrompt: getActiveSystemPrompt() || undefined,
             history: messageHistory,
             userMessage: input,
             imagesBase64,
@@ -412,7 +412,6 @@ export const useChatCompletion = (
       state.attachedFiles,
       selectedAIProvider,
       allAiProviders,
-      systemPrompt,
       messages,
       conversationId,
       setMessages,

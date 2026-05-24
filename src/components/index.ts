@@ -15,3 +15,4 @@ export * from "./Logo";
 export * from "./Header/UserProfile";
 export * from "./PremiumGate";
 export * from "./ModelSelector";
+export * from "./MicButton";
