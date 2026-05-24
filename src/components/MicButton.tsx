@@ -1,34 +1,31 @@
-import { useEffect, useMemo, useRef } from "react";
-import { ChevronDown, Mic, MicOff } from "lucide-react";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui";
-import { useLiveTranscription, TranscriptionMode } from "@/hooks";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Mic, MicOff, Zap } from "lucide-react";
+import { Button } from "@/components/ui";
+import { useLiveTranscription } from "@/hooks";
 import { cn } from "@/lib/utils";
 
 type MicButtonProps = {
   onTranscript: (text: string) => void;
+  onLiveTranscript?: (text: string) => void;
+  onAutoSend?: (text: string) => void;
+  onListeningChange?: (isListening: boolean) => void;
   disabled?: boolean;
   className?: string;
   buttonClassName?: string;
-  menuButtonClassName?: string;
+  autoSendButtonClassName?: string;
   showPreview?: boolean;
   previewPosition?: "top" | "bottom";
 };
 
 export const MicButton = ({
   onTranscript,
+  onLiveTranscript,
+  onAutoSend,
+  onListeningChange,
   disabled = false,
   className,
   buttonClassName,
-  menuButtonClassName,
+  autoSendButtonClassName,
   showPreview = true,
   previewPosition = "bottom",
 }: MicButtonProps) => {
@@ -37,27 +34,38 @@ export const MicButton = ({
     transcript,
     start,
     stop,
-    mode,
-    setMode,
     error,
     reset,
     isSupported,
-    systemAudioSupported,
   } = useLiveTranscription();
 
   const wasListeningRef = useRef(false);
+  const [autoSend, setAutoSend] = useState(false);
 
   useEffect(() => {
     const wasListening = wasListeningRef.current;
     if (wasListening && !isListening) {
       const finalText = transcript.trim();
-      if (!error && finalText) {
+      if (!error && finalText && autoSend && onAutoSend) {
+        onAutoSend(finalText);
+      } else if (!error && finalText) {
         onTranscript(finalText);
       }
       reset();
     }
     wasListeningRef.current = isListening;
-  }, [error, isListening, onTranscript, reset, transcript]);
+  }, [autoSend, error, isListening, onAutoSend, onTranscript, reset, transcript]);
+
+  useEffect(() => {
+    onListeningChange?.(isListening);
+  }, [isListening, onListeningChange]);
+
+  useEffect(() => {
+    if (!isListening) return;
+    if (transcript.trim()) {
+      onLiveTranscript?.(transcript);
+    }
+  }, [isListening, onLiveTranscript, transcript]);
 
   const statusText = useMemo(() => {
     if (error) return error;
@@ -72,12 +80,6 @@ export const MicButton = ({
     } else {
       start();
     }
-  };
-
-  const handleModeChange = (value: string) => {
-    if (isListening) stop();
-    setMode(value as TranscriptionMode);
-    reset();
   };
 
   const micTitle = !isSupported
@@ -110,41 +112,21 @@ export const MicButton = ({
         )}
       </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            disabled={disabled}
-            title="Select audio source"
-            className={cn(
-              "h-8 w-8 text-white/50 hover:text-white/80",
-              menuButtonClassName
-            )}
-          >
-            <ChevronDown className="size-3" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuRadioGroup value={mode} onValueChange={handleModeChange}>
-            <DropdownMenuRadioItem value="microphone">
-              Microphone
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="system">
-              System Audio (Beta)
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-          {!systemAudioSupported && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                System audio needs a native loopback helper in v5.2.
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        disabled={disabled}
+        title={autoSend ? "Auto-send on silence" : "Manual send"}
+        onClick={() => setAutoSend((prev) => !prev)}
+        className={cn(
+          "h-8 w-8 text-white/50 hover:text-white/80",
+          autoSend && "text-emerald-300",
+          autoSendButtonClassName
+        )}
+      >
+        <Zap className="size-3.5" />
+      </Button>
 
       {showPreview && statusText && (
         <div

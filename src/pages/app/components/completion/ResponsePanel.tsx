@@ -15,6 +15,7 @@ export const ResponsePanel = ({
   scrollAreaRef,
   screenshotSent,
   handleDeleteCurrentConversation,
+  micOpen,
 }: UseCompletionReturn) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +103,19 @@ export const ResponsePanel = ({
               <Markdown>{message.content}</Markdown>
             </div>
           ))}
+
+          {/* Live: dictation preview */}
+          {micOpen && !isLoading && (
+            <div className="bg-emerald-500/10 border-l-2 border-emerald-500 rounded-lg px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  You
+                </span>
+                <span className="text-[10px] text-white/25">Listening…</span>
+              </div>
+              <p className="text-white/80 text-sm">{input.trim() || "…"}</p>
+            </div>
+          )}
 
           {/* Live: current user question (only while loading) */}
           {isLoading && (

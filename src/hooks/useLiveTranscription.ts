@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type TranscriptionMode = "microphone" | "system";
-
 type SpeechRecognitionResultLike = {
   isFinal: boolean;
   0: { transcript: string };
@@ -58,8 +56,7 @@ const errorMessageForSpeech = (error: string) => {
   }
 };
 
-export const useLiveTranscription = (initialMode: TranscriptionMode = "microphone") => {
-  const [mode, setMode] = useState<TranscriptionMode>(initialMode);
+export const useLiveTranscription = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +70,6 @@ export const useLiveTranscription = (initialMode: TranscriptionMode = "microphon
   );
 
   const isSupported = Boolean(recognitionConstructor);
-  const systemAudioSupported = false;
-
   const buildRecognition = useCallback(() => {
     if (!recognitionConstructor) return null;
     const recognition = new recognitionConstructor();
@@ -115,12 +110,6 @@ export const useLiveTranscription = (initialMode: TranscriptionMode = "microphon
 
   const start = useCallback(() => {
     if (isListening) return;
-    if (mode === "system") {
-      setError(
-        "System audio capture requires a native loopback helper. Use Microphone for now."
-      );
-      return;
-    }
     if (!recognitionConstructor) {
       setError("Speech recognition is not supported in this environment.");
       return;
@@ -148,7 +137,7 @@ export const useLiveTranscription = (initialMode: TranscriptionMode = "microphon
       );
       setIsListening(false);
     }
-  }, [buildRecognition, isListening, mode, recognitionConstructor]);
+  }, [buildRecognition, isListening, recognitionConstructor]);
 
   const stop = useCallback(() => {
     if (!recognitionRef.current) return;
@@ -179,8 +168,6 @@ export const useLiveTranscription = (initialMode: TranscriptionMode = "microphon
   }, []);
 
   return {
-    mode,
-    setMode,
     isListening,
     transcript,
     error,
@@ -188,6 +175,5 @@ export const useLiveTranscription = (initialMode: TranscriptionMode = "microphon
     stop,
     reset,
     isSupported,
-    systemAudioSupported,
   };
 };

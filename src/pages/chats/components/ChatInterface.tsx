@@ -303,6 +303,7 @@ export const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dictationBaseRef = useRef("");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -397,8 +398,13 @@ export const ChatInterface = () => {
 
   // ── Send message ──────────────────────────────────────────────────────────
 
-  const handleSend = async () => {
-    const content = inputValue.trim();
+  const buildCombinedInput = (speechText: string) => {
+    const base = dictationBaseRef.current.trim();
+    return base ? `${base} ${speechText}` : speechText;
+  };
+
+  const handleSend = async (overrideText?: string) => {
+    const content = (overrideText ?? inputValue).trim();
     if (!content || isLoading) return;
 
     const userMsg: Message = { id: `msg-${Date.now()}`, role: "user", content, timestamp: Date.now(), attachments: [...attachments] };
@@ -691,14 +697,30 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
                 />
                 <MicButton
                   onTranscript={(text) => {
-                    setInputValue((prev) =>
-                      prev ? `${prev.trimEnd()} ${text}` : text
-                    );
+                    const combined = buildCombinedInput(text.trim());
+                    if (!combined.trim()) return;
+                    setInputValue(combined);
+                    dictationBaseRef.current = combined;
                     setTimeout(() => inputRef.current?.focus(), 0);
+                  }}
+                  onLiveTranscript={(text) => {
+                    const combined = buildCombinedInput(text.trim());
+                    if (!combined.trim()) return;
+                    setInputValue(combined);
+                  }}
+                  onAutoSend={(text) => {
+                    const combined = buildCombinedInput(text.trim());
+                    if (!combined.trim()) return;
+                    handleSend(combined);
+                  }}
+                  onListeningChange={(listening) => {
+                    if (listening) {
+                      dictationBaseRef.current = inputValue.trimEnd();
+                    }
                   }}
                   disabled={isLoading}
                   buttonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
-                  menuButtonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
+                  autoSendButtonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
                   previewPosition="top"
                 />
                 <button
@@ -722,7 +744,7 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
               </div>
 
               <button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={isLoading || !inputValue.trim()}
                 className={cn(
                   "size-8 rounded-xl flex items-center justify-center transition-all duration-200 shrink-0",

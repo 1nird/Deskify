@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/auth.context";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
@@ -39,6 +38,7 @@ export const AuthGate = ({ children }: Props) => {
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
   const [versionError, setVersionError] = useState<boolean>(false);
   const [loadingUpdate, setLoadingUpdate] = useState<boolean>(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     // Version Lock: Check if this version is allowed to run
@@ -77,7 +77,7 @@ export const AuthGate = ({ children }: Props) => {
     };
     checkVersion();
   }, []);
-  const { updateAvailable, setUpdateAvailable } = useApp();
+  const { updateAvailable, setUpdateAvailable, applyUpdate } = useApp();
 
   useEffect(() => {
 
@@ -197,13 +197,14 @@ export const AuthGate = ({ children }: Props) => {
   onClick={async () => {
     try {
       setLoadingUpdate(true);
-      await updateAvailable.downloadAndInstall();
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
+      setUpdateError(null);
+      const didUpdate = await applyUpdate();
+      if (!didUpdate) {
+        setUpdateError("Update failed. Please try again in a moment.");
+      }
     } catch (e) {
       console.error("Failed to install update automatically:", e);
-      const url = 'https://github.com/1nird/Deskify/releases/latest';
-      await openUrl(url);
+      setUpdateError("Update failed. Please try again in a moment.");
     } finally {
       setLoadingUpdate(false);
     }
@@ -219,6 +220,9 @@ export const AuthGate = ({ children }: Props) => {
   ) : null}
   Update Now
 </Button>
+              {updateError && (
+                <p className="text-xs text-red-400 font-medium">{updateError}</p>
+              )}
               {googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
                 <Button
                   onClick={() => setUpdateAvailable(null)}
@@ -246,7 +250,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v5.2.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v5.3.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">

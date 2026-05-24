@@ -20,7 +20,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/layouts";
@@ -37,6 +37,7 @@ const View = () => {
   const { supportsImages } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatConversation | null>(null);
+  const dictationBaseRef = useRef("");
 
   const {
     handleDeleteConfirm,
@@ -79,14 +80,32 @@ const View = () => {
     navigate(-1);
   };
 
+  const buildCombinedInput = (speechText: string) => {
+    const base = dictationBaseRef.current.trim();
+    return base ? `${base} ${speechText}` : speechText;
+  };
+
   const handleTranscript = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const nextValue = completion.input
-      ? `${completion.input.trimEnd()} ${trimmed}`
-      : trimmed;
-    completion.setInput(nextValue);
+    const combined = buildCombinedInput(trimmed);
+    completion.setInput(combined);
+    dictationBaseRef.current = combined;
     setTimeout(() => completion.inputRef.current?.focus(), 0);
+  };
+
+  const handleLiveTranscript = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const combined = buildCombinedInput(trimmed);
+    completion.setInput(combined);
+  };
+
+  const handleAutoSend = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const combined = buildCombinedInput(trimmed);
+    completion.submit(combined);
   };
 
   return (
@@ -293,10 +312,17 @@ const View = () => {
                 />
                 <MicButton
                   onTranscript={handleTranscript}
+                  onLiveTranscript={handleLiveTranscript}
+                  onAutoSend={handleAutoSend}
+                  onListeningChange={(listening) => {
+                    if (listening) {
+                      dictationBaseRef.current = completion.input.trimEnd();
+                    }
+                  }}
                   disabled={completion.isLoading}
                   className="absolute right-11 bottom-2"
                   buttonClassName="size-7 lg:size-9 rounded-lg lg:rounded-xl hover:bg-muted/60"
-                  menuButtonClassName="size-7 lg:size-9 rounded-lg lg:rounded-xl hover:bg-muted/60"
+                  autoSendButtonClassName="size-7 lg:size-9 rounded-lg lg:rounded-xl hover:bg-muted/60"
                   previewPosition="top"
                 />
                 <Button

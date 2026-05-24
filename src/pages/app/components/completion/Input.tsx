@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { Loader2, MessageSquareText } from "lucide-react";
 import {
   Input as InputComponent,
@@ -24,6 +24,8 @@ export const Input = ({
   messageHistoryOpen,
   setMessageHistoryOpen,
   inputRef,
+  submit,
+  setMicOpen,
   isHidden,
 }: UseCompletionReturn & {
   isHidden: boolean;
@@ -50,12 +52,41 @@ export const Input = ({
 
   const hasThread =
     Boolean(currentConversationId) && conversationHistory.length > 0;
+  const baseInputRef = useRef("");
+
+  const buildCombinedInput = (speechText: string) => {
+    const base = baseInputRef.current.trim();
+    return base ? `${base} ${speechText}` : speechText;
+  };
+
   const handleTranscript = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const nextValue = input ? `${input.trimEnd()} ${trimmed}` : trimmed;
-    setInput(nextValue);
+    const combined = buildCombinedInput(trimmed);
+    setInput(combined);
+    baseInputRef.current = combined;
     inputRef.current?.focus();
+  };
+
+  const handleLiveTranscript = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const combined = buildCombinedInput(trimmed);
+    setInput(combined);
+  };
+
+  const handleAutoSend = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const combined = buildCombinedInput(trimmed);
+    submit(combined);
+  };
+
+  const handleListeningChange = (listening: boolean) => {
+    setMicOpen(listening);
+    if (listening) {
+      baseInputRef.current = input.trimEnd();
+    }
   };
 
   return (
@@ -71,16 +102,19 @@ export const Input = ({
           disabled={isLoading || isHidden}
           className={cn(
             "h-8 min-h-8 py-1 text-sm transition-all duration-200 hover:border-emerald-500/40",
-            hasThread ? "pr-[6.5rem]" : "pr-[3.75rem]"
+            hasThread ? "pr-[8.25rem]" : "pr-[5.5rem]"
           )}
         />
 
         <div className="absolute inset-y-0 right-1 flex items-center gap-1">
           <MicButton
             onTranscript={handleTranscript}
+            onLiveTranscript={handleLiveTranscript}
+            onAutoSend={handleAutoSend}
+            onListeningChange={handleListeningChange}
             disabled={isLoading || isHidden}
             buttonClassName="h-7 w-7"
-            menuButtonClassName="h-7 w-7"
+            autoSendButtonClassName="h-7 w-7"
             showPreview={false}
           />
           {hasThread && !isLoading && (

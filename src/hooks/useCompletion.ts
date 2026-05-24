@@ -956,7 +956,8 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
     state.isLoading ||
     state.response !== "" ||
     state.error !== null ||
-    (messageHistoryOpen && state.conversationHistory.length > 0);
+    (messageHistoryOpen && state.conversationHistory.length > 0) ||
+    micOpen;
 
   const popoverChromeExpanded =
     isChatPanelExpanded &&
