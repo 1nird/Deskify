@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Deskify",
-  "version": "5.8.0",
+  "version": "5.9.0",
   "identifier": "com.deskify.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -31,7 +31,9 @@
         "shadow": false
       }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
@@ -44,18 +46,26 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["info.plist", "deskify.desktop"],
-    "macOS": { "minimumSystemVersion": "10.13" },
-    "windows": {
-    }
+    "resources": [
+      "info.plist",
+      "deskify.desktop"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    },
+    "windows": {}
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:deskify.db"]
+      "preload": [
+        "sqlite:deskify.db"
+      ]
     },
     "updater": {
       "active": true,
-      "endpoints": ["https://deskify.site/update/latest.json"],
+      "endpoints": [
+        "https://deskify.site/update/latest.json"
+      ],
       "pubkey": "deskify.key.pub",
       "dialog": false
     }
