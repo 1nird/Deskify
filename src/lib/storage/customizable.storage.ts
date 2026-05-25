@@ -93,6 +93,35 @@ export const updateCursorType = (type: CursorType): CustomizableState => {
 };
 
 /**
+ * Get mic silence timeout from localStorage
+ */
+export const getMicSilenceTimeout = (): number => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.MIC_SILENCE_TIMEOUT);
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!Number.isNaN(parsed) && parsed >= 500 && parsed <= 10000) {
+        return parsed;
+      }
+    }
+    return 1800; // default 1.8s
+  } catch {
+    return 1800;
+  }
+};
+
+/**
+ * Save mic silence timeout to localStorage
+ */
+export const setMicSilenceTimeout = (ms: number): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.MIC_SILENCE_TIMEOUT, String(ms));
+  } catch {
+    /* ignore */
+  }
+};
+
+/**
  * Update autostart state
  */
 export const updateAutostart = (isEnabled: boolean): CustomizableState => {

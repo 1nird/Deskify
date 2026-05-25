@@ -27,7 +27,9 @@ function markUpdaterCheckStarted() {
 
 /**
  * Discord-style updater: check shortly after startup, download + install in the
- * background, then relaunch. No floating UI on the chat overlay (or elsewhere).
+ * background, then relaunch. The installer wizard will appear on Windows (NSIS
+ * limitation — Tauri v2 does not support silent NSIS installs). After the
+ * wizard completes, the updated app launches automatically.
  */
 export const Updater = () => {
   const ran = useRef(false);
@@ -48,14 +50,25 @@ export const Updater = () => {
         }
 
         console.log(`[Updater] Update ${found.version} available — downloading…`);
+        // Notify other components (AuthGate) about the available update
+        window.dispatchEvent(new CustomEvent('updateAvailable', { detail: found }));
         await found.downloadAndInstall((event) => {
-          if (event.event === "Finished") {
-            console.log("[Updater] Install staged; restarting…");
+          if (event.event === "Started") {
+            console.log("[Updater] Download started...");
+          } else if (event.event === "Progress") {
+            const downloaded = (event.data as any)?.downloaded ?? 0;
+            const total = (event.data as any)?.total;
+            const pct = total && total > 0 ? Math.min(99, Math.round((downloaded / total) * 100)) : 0;
+            if (pct > 0) console.log(`[Updater] Download progress: ${pct}%`);
+          } else if (event.event === "Finished") {
+            console.log("[Updater] Download complete — launching installer…");
           }
         });
+        console.log("[Updater] Installer launched — restarting after install…");
         await relaunch();
       } catch (e) {
-        console.warn("[Updater] Silent update skipped:", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn("[Updater] Silent update skipped:", msg);
       }
     };
 

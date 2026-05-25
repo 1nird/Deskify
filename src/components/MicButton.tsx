@@ -3,8 +3,8 @@ import { Mic, MicOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useLiveTranscription } from "@/hooks";
 import { cn } from "@/lib/utils";
-
-const SILENCE_TIMEOUT_MS = 1800;
+import { getMicSilenceTimeout } from "@/lib/storage";
+import { useMicVAD } from "@ricky0123/vad-react";
 
 type MicButtonProps = {
   onTranscript: (text: string) => void;
@@ -45,23 +45,59 @@ export const MicButton = ({
   const [autoSend, setAutoSend] = useState(false);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTranscriptRef = useRef("");
+  const vadActiveRef = useRef(false);
 
-  // Silence detection: auto-stop & send when transcript stops changing
+  // VAD: voice activity detection for accurate speech start/end
+  const vad = useMicVAD({
+    startOnLoad: false,
+    onSpeechStart: () => {
+      // User started speaking — cancel any pending silence timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    },
+    onSpeechEnd: () => {
+      // VAD detected speech ended. If auto-send is on, start silence countdown.
+      // During this countdown, if speech resumes, timer is cancelled.
+      if (autoSend && isListening && transcript.trim()) {
+        const timeoutMs = getMicSilenceTimeout();
+        silenceTimerRef.current = setTimeout(() => {
+          stop();
+        }, timeoutMs);
+      }
+    },
+    onVADMisfire: () => {
+      // Brief false positive — clear any pending auto-send timer as a safety net
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    },
+  });
+
+  // Track VAD state (must run before fallback timer to avoid race condition)
+  useEffect(() => {
+    vadActiveRef.current = !vad.errored && !vad.loading && vad.listening;
+  }, [vad.errored, vad.loading, vad.listening]);
+
+  // Fallback silence timer (used when VAD fails to load):
+  // auto-stop & send when transcript stops changing for the configured timeout
   useEffect(() => {
     if (!isListening || !autoSend || !transcript.trim()) return;
+    // Only use fallback timer if VAD is not active
+    if (vadActiveRef.current) return;
 
-    // Clear previous timer
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
 
-    // Only set timer if transcript changed
     if (transcript !== lastTranscriptRef.current) {
       lastTranscriptRef.current = transcript;
+      const timeoutMs = getMicSilenceTimeout();
       silenceTimerRef.current = setTimeout(() => {
-        // Silence detected — stop and let the on-end handler auto-send
         stop();
-      }, SILENCE_TIMEOUT_MS);
+      }, timeoutMs);
     }
 
     return () => {
@@ -121,11 +157,15 @@ export const MicButton = ({
     if (disabled) return;
     if (isListening) {
       stop();
+      // Pause VAD
+      try { vad.pause(); } catch { /* VAD may not be started */ }
     } else {
       lastTranscriptRef.current = "";
       start();
+      // Start VAD (ignores error if VAD fails — falls back to timer)
+      try { vad.start(); } catch { /* gracefully fall back to manual timer */ }
     }
-  }, [disabled, isListening, stop, start]);
+  }, [disabled, isListening, stop, start, vad]);
 
   const micTitle = !isSupported
     ? "Speech recognition isn't supported in this environment"
@@ -153,7 +193,12 @@ export const MicButton = ({
       >
         {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
         {isListening && (
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+          <span
+            className={cn(
+              "absolute top-1 right-1 h-2 w-2 rounded-full animate-pulse",
+              vad.userSpeaking ? "bg-emerald-400" : "bg-red-500"
+            )}
+          />
         )}
       </Button>
 

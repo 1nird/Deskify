@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { MousePointer2 } from "lucide-react";
 
+const MIN_SELECTION_SIZE = 10;
+
 interface SelectionCoords {
   x: number;
   y: number;
@@ -25,6 +27,8 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
   });
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [cursorVisible, setCursorVisible] = useState(false);
+  const [showDimensions, setShowDimensions] = useState(false);
+  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
 
   const selectionRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +73,7 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
     setIsSelecting(true);
     setStartCoords({ x: e.clientX, y: e.clientY });
     setCursorPosition({ x: e.clientX, y: e.clientY });
+    setShowDimensions(false);
 
     setSelectionStyle({
       left: e.clientX,
@@ -105,6 +110,15 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
       top,
     }));
 
+    // Show dimensions when selection is meaningful
+    if (width >= MIN_SELECTION_SIZE || height >= MIN_SELECTION_SIZE) {
+      const scaleFactor = window.devicePixelRatio || 1;
+      setDimensions({ w: Math.round(width * scaleFactor), h: Math.round(height * scaleFactor) });
+      setShowDimensions(true);
+    } else {
+      setShowDimensions(false);
+    }
+
     e.preventDefault();
     e.stopPropagation();
   };
@@ -125,7 +139,9 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (width >= 10 && height >= 10) {
+    setShowDimensions(false);
+
+    if (width >= MIN_SELECTION_SIZE && height >= MIN_SELECTION_SIZE) {
       handleSelectionComplete(x, y, width, height);
     } else {
       handleCancel();
@@ -190,10 +206,10 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
           Cancel (ESC)
         </button>
 
-        {/* Selection Rectangle */}
+        {/* Selection Rectangle — outer glow */}
         <div
           ref={selectionRef}
-          className="absolute border-2 border-primary-foreground bg-primary/10 rounded-3xl rounded-br-none pointer-events-none"
+          className="absolute border-2 border-white/80 bg-white/5 pointer-events-none"
           style={{
             left: selectionStyle.left,
             top: selectionStyle.top,
@@ -201,20 +217,35 @@ const Overlay: React.FC<OverlayProps> = ({ monitorIndex }) => {
             height: selectionStyle.height,
             display: selectionStyle.display,
             zIndex: 4000,
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.15), inset 0 0 0 1px rgba(255,255,255,0.05)",
+            borderRadius: "6px",
           }}
         />
+        {/* Selection Rectangle — inner dashed accent */}
         <div
-          ref={selectionRef}
-          className="absolute border-[0.5px] border-black bg-primary/5 rounded-3xl rounded-br-none pointer-events-none"
+          className="absolute border border-dashed border-emerald-400/50 pointer-events-none"
           style={{
-            left: selectionStyle.left,
-            top: selectionStyle.top,
-            width: selectionStyle.width,
-            height: selectionStyle.height,
+            left: selectionStyle.left + 2,
+            top: selectionStyle.top + 2,
+            width: Math.max(0, selectionStyle.width - 4),
+            height: Math.max(0, selectionStyle.height - 4),
             display: selectionStyle.display,
-            zIndex: 4000,
+            zIndex: 4001,
+            borderRadius: "4px",
           }}
         />
+        {/* Dimensions tooltip */}
+        {showDimensions && isSelecting && (
+          <div
+            className="fixed pointer-events-none z-[5001] px-2.5 py-1 rounded-md bg-black/80 backdrop-blur-sm border border-white/10 text-[10px] font-mono text-emerald-300 shadow-lg"
+            style={{
+              left: Math.min(selectionStyle.left + selectionStyle.width + 8, window.innerWidth - 110),
+              top: Math.min(selectionStyle.top + selectionStyle.height + 8, window.innerHeight - 32),
+            }}
+          >
+            {dimensions.w} × {dimensions.h}
+          </div>
+        )}
 
         {/* Custom Cursor */}
         <div

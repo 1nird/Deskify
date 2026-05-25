@@ -39,6 +39,8 @@ export const AuthGate = ({ children }: Props) => {
   const [versionError, setVersionError] = useState<boolean>(false);
   const [loadingUpdate, setLoadingUpdate] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updateProgress, setUpdateProgress] = useState<number>(0);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
     // Version Lock: Check if this version is allowed to run
@@ -77,7 +79,14 @@ export const AuthGate = ({ children }: Props) => {
     };
     checkVersion();
   }, []);
-  const { updateAvailable, setUpdateAvailable, applyUpdate } = useApp();
+  const { updateAvailable, setUpdateAvailable, applyUpdate, openDownloadPage } = useApp();
+
+  // Extract version from update when available
+  useEffect(() => {
+    if (updateAvailable?.version) {
+      setUpdateVersion(updateAvailable.version);
+    }
+  }, [updateAvailable]);
 
   useEffect(() => {
 
@@ -193,14 +202,29 @@ export const AuthGate = ({ children }: Props) => {
               </p>
             </div>
             <div className="flex flex-col items-center gap-3 w-full mt-4">
+{updateProgress > 0 && updateProgress < 100 && (
+  <div className="w-full">
+    <div className="flex justify-between text-xs text-zinc-400 mb-1">
+      <span>Downloading update…</span>
+      <span>{updateProgress}%</span>
+    </div>
+    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+        style={{ width: `${updateProgress}%` }}
+      />
+    </div>
+  </div>
+)}
 <Button
   onClick={async () => {
     try {
       setLoadingUpdate(true);
       setUpdateError(null);
-      const didUpdate = await applyUpdate();
-      if (!didUpdate) {
-        setUpdateError("Update failed. Please try again in a moment.");
+      setUpdateProgress(0);
+      const result = await applyUpdate((pct) => setUpdateProgress(pct));
+      if (!result.success) {
+        setUpdateError(result.error || "Update failed. Please try again in a moment.");
       }
     } catch (e) {
       console.error("Failed to install update automatically:", e);
@@ -218,19 +242,27 @@ export const AuthGate = ({ children }: Props) => {
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
   ) : null}
-  Update Now
+  {loadingUpdate ? "Installing…" : updateVersion ? `Update to v${updateVersion}` : "Update Now"}
 </Button>
-              {updateError && (
-                <p className="text-xs text-red-400 font-medium">{updateError}</p>
-              )}
-              {googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
-                <Button
-                  onClick={() => setUpdateAvailable(null)}
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-0 cursor-pointer rounded-full h-10 font-medium flex items-center justify-center"
-                >
-                  Skip for Now
-                </Button>
-              )}
+{updateError && (
+  <div className="w-full space-y-3">
+    <p className="text-xs text-red-400 font-medium text-center">{updateError}</p>
+    <Button
+      onClick={() => openDownloadPage()}
+      className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 cursor-pointer rounded-full h-10 font-medium flex items-center justify-center"
+    >
+      Download from Website
+    </Button>
+  </div>
+)}
+{!updateError && googleProfile?.email?.toLowerCase() === "nirdeshbar@gmail.com" && (
+  <Button
+    onClick={() => setUpdateAvailable(null)}
+    className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-0 cursor-pointer rounded-full h-10 font-medium flex items-center justify-center"
+  >
+    Skip for Now
+  </Button>
+)}
             </div>
           </div>
         </div>
@@ -250,7 +282,7 @@ export const AuthGate = ({ children }: Props) => {
             <div className="space-y-2">
               <h1 className="text-2xl font-black tracking-tight text-white">Version Expired</h1>
               <p className="text-sm text-zinc-500 font-medium leading-relaxed">
-                This version of Deskify is no longer supported. Please download the latest version (v5.3.0) from the official website to continue.
+                This version of Deskify is no longer supported. Please download the latest version (v5.8.0) from the official website to continue.
               </p>
             </div>
             <div className="w-full pt-4">

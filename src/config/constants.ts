@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   LAST_REFRESH: "last_refresh",
   USER: "user",
   AUTH_SESSION: "deskify_auth_session",
+  MIC_SILENCE_TIMEOUT: "mic_silence_timeout",
 } as const;
 
 /** 24-hour credit refill window while signed in. */

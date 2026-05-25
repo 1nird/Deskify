@@ -15,48 +15,78 @@ export const useApp = () => {
 
   const [updateAvailable, setUpdateAvailable] = useState<any>(null);
 
-  // Auto-update check on app launch
+  // Manual update check (called from settings or AuthGate).
+  // The silent background check is handled by updater/index.tsx with dedup logic.
   const checkForUpdate = async () => {
     try {
       const update = await check();
-      // If there is an update object, store it; otherwise clear any previous state.
       setUpdateAvailable(update ?? null);
+      return update ?? null;
     } catch (e) {
       console.error('Update check failed:', e);
       setUpdateAvailable(null);
+      throw e;
     }
   };
 
-  // Run on mount
+  // Listen for updates discovered by the silent background updater
   useEffect(() => {
-    checkForUpdate();
+    const handler = (e: CustomEvent) => {
+      if (e.detail) {
+        setUpdateAvailable(e.detail);
+      }
+    };
+    window.addEventListener('updateAvailable', handler as EventListener);
+    return () => window.removeEventListener('updateAvailable', handler as EventListener);
   }, []);
 
-  const applyUpdate = async (): Promise<boolean> => {
+  const applyUpdate = async (
+    onProgress?: (pct: number) => void
+  ): Promise<{ success: boolean; error?: string }> => {
     console.log("[Updater] Starting update installation...");
     try {
       const freshUpdate = await check();
-      if (freshUpdate) {
-        console.log(`[Updater] Update ${freshUpdate.version} found — downloading…`);
-        await freshUpdate.downloadAndInstall((event) => {
-          if (event.event === "Started") {
-            console.log("[Updater] Download started...");
-          } else if (event.event === "Progress") {
-            console.log(`[Updater] Download progress: ${JSON.stringify(event)}`);
-          } else if (event.event === "Finished") {
-            console.log("[Updater] Download complete, installing...");
-          }
-        });
-        console.log("[Updater] Install staged — relaunching…");
-        await relaunch();
-        return true;
+      if (!freshUpdate) {
+        return { success: false, error: "No update available. You are on the latest version." };
       }
-    } catch (e) {
-      console.error("[Updater] Auto-update failed:", e);
-    }
 
-    console.log("[Updater] Auto-update unavailable — no update to apply.");
-    return false;
+      console.log(`[Updater] Update ${freshUpdate.version} found — downloading…`);
+
+      await freshUpdate.downloadAndInstall((event) => {
+        if (event.event === "Started") {
+          console.log("[Updater] Download started...");
+        } else if (event.event === "Progress") {
+          const downloaded = (event.data as any)?.downloaded ?? 0;
+          const total = (event.data as any)?.total;
+          const pct = total && total > 0 ? Math.min(99, Math.round((downloaded / total) * 100)) : 0;
+          if (pct > 0) {
+            console.log(`[Updater] Download progress: ${pct}%`);
+            onProgress?.(pct);
+          }
+        } else if (event.event === "Finished") {
+          console.log("[Updater] Download complete, launching installer...");
+          onProgress?.(100);
+        }
+      });
+
+      console.log("[Updater] Install staged — relaunching…");
+      await relaunch();
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[Updater] Auto-update failed:", e);
+      return { success: false, error: msg || "Update failed. Check your connection and try again." };
+    }
+  };
+
+  /** Fallback: open the download page in the browser if auto-update fails. */
+  const openDownloadPage = async () => {
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://deskify.site/download");
+    } catch (e) {
+      console.error("[Updater] Failed to open download page:", e);
+    }
   };
   // Initialize shortcuts from localStorage on app startup
   useEffect(() => {
@@ -201,6 +231,7 @@ export const useApp = () => {
     setUpdateAvailable,
     checkForUpdate,
     applyUpdate,
+    openDownloadPage,
     handleSelectConversation,
     handleNewConversation,
   };

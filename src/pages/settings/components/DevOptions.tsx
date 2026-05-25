@@ -13,28 +13,30 @@ export const DevOptions = () => {
     setMessage("Checking for updates...");
     
     try {
-      if (checkForUpdate) {
-        await checkForUpdate();
-      }
+      const update = await checkForUpdate();
       
-      setTimeout(() => {
+      if (update) {
         setStatus("success");
-        setMessage("Check complete. If an update exists, it will appear in the dashboard.");
-        
-        setTimeout(() => {
-          setStatus("idle");
-          setMessage("");
-        }, 3000);
-      }, 500);
-    } catch (err) {
-      console.error(err);
-      setStatus("error");
-      setMessage("Error checking for updates.");
+        setMessage(`Update v${update.version} found! Install it from the dashboard or restart the app.`);
+      } else {
+        setStatus("success");
+        setMessage("You're on the latest version.");
+      }
       
       setTimeout(() => {
         setStatus("idle");
         setMessage("");
-      }, 3000);
+      }, 4000);
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+      const errorDetail = err instanceof Error ? err.message : "Unknown error";
+      setMessage(`Update check failed: ${errorDetail}. Check your connection and try again.`);
+      
+      setTimeout(() => {
+        setStatus("idle");
+        setMessage("");
+      }, 5000);
     }
   };
 
