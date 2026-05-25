@@ -215,13 +215,21 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
     setState((prev) => ({ ...prev, attachedFiles: [] }));
   }, []);
 
+  // Guard against re-entrant calls (e.g., voice auto-send firing twice)
+  const isSubmittingRef = useRef(false);
+
   const submit = useCallback(
     async (speechText?: string) => {
+      // Prevent duplicate submissions from rapid voice/click events
+      if (isSubmittingRef.current) return;
+
       let input = speechText || state.input;
 
       if (!input.trim()) {
         input = "Analyze the screen and provide immediate assistance as my Deskify copilot. Focus on being maximally useful and providing clear, actionable next steps based on what is visible.";
       }
+
+      isSubmittingRef.current = true;
 
       if (speechText) {
         setState((prev) => ({
@@ -238,6 +246,7 @@ export const useCompletion = (isChatPanelExpanded: boolean = true) => {
           error:
             "You're out of credits for this session. They refresh every 24 hours.",
         }));
+        isSubmittingRef.current = false;
         return;
       }
 
@@ -443,6 +452,8 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
             isLoading: false,
           }));
         }
+      } finally {
+        isSubmittingRef.current = false;
       }
     },
     [

@@ -403,9 +403,18 @@ export const ChatInterface = () => {
     return base ? `${base} ${speechText}` : speechText;
   };
 
+  // Ref-based guard to prevent duplicate sends from rapid voice/click events
+  const isSendingRef = useRef(false);
+
+  // Stable refs so callbacks passed to MicButton don't change on every render
+  const handleSendRef = useRef<(overrideText?: string) => Promise<void>>(async () => {});
+  const inputValueRef = useRef(inputValue);
+  inputValueRef.current = inputValue;
+
   const handleSend = async (overrideText?: string) => {
     const content = (overrideText ?? inputValue).trim();
-    if (!content || isLoading) return;
+    if (!content || isSendingRef.current) return;
+    isSendingRef.current = true;
 
     const userMsg: Message = { id: `msg-${Date.now()}`, role: "user", content, timestamp: Date.now(), attachments: [...attachments] };
     // Capture current messages for history before state update
@@ -458,10 +467,41 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
       setMessages(finalMessages);
       saveSession(currentId, finalMessages);
     } finally {
+      isSendingRef.current = false;
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
+
+  // Keep the ref in sync so stable callbacks always call the latest handleSend
+  handleSendRef.current = handleSend;
+
+  // Stable callbacks for MicButton — use refs to avoid unstable dependencies
+  const handleMicTranscript = useCallback((text: string) => {
+    const combined = buildCombinedInput(text.trim());
+    if (!combined.trim()) return;
+    setInputValue(combined);
+    dictationBaseRef.current = combined;
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleMicLiveTranscript = useCallback((text: string) => {
+    const combined = buildCombinedInput(text.trim());
+    if (!combined.trim()) return;
+    setInputValue(combined);
+  }, []);
+
+  const handleMicAutoSend = useCallback((text: string) => {
+    const combined = buildCombinedInput(text.trim());
+    if (!combined.trim()) return;
+    handleSendRef.current(combined);
+  }, []);
+
+  const handleMicListeningChange = useCallback((listening: boolean) => {
+    if (listening) {
+      dictationBaseRef.current = inputValueRef.current.trimEnd();
+    }
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -696,28 +736,10 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
                   userPlan={userPlan}
                 />
                 <MicButton
-                  onTranscript={(text) => {
-                    const combined = buildCombinedInput(text.trim());
-                    if (!combined.trim()) return;
-                    setInputValue(combined);
-                    dictationBaseRef.current = combined;
-                    setTimeout(() => inputRef.current?.focus(), 0);
-                  }}
-                  onLiveTranscript={(text) => {
-                    const combined = buildCombinedInput(text.trim());
-                    if (!combined.trim()) return;
-                    setInputValue(combined);
-                  }}
-                  onAutoSend={(text) => {
-                    const combined = buildCombinedInput(text.trim());
-                    if (!combined.trim()) return;
-                    handleSend(combined);
-                  }}
-                  onListeningChange={(listening) => {
-                    if (listening) {
-                      dictationBaseRef.current = inputValue.trimEnd();
-                    }
-                  }}
+                  onTranscript={handleMicTranscript}
+                  onLiveTranscript={handleMicLiveTranscript}
+                  onAutoSend={handleMicAutoSend}
+                  onListeningChange={handleMicListeningChange}
                   disabled={isLoading}
                   buttonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"
                   autoSendButtonClassName="hover:bg-white/10 text-white/40 hover:text-white/80"

@@ -63,6 +63,7 @@ export const useLiveTranscription = () => {
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const finalTranscriptRef = useRef("");
+  const processedFinalIndicesRef = useRef<Set<number>>(new Set());
 
   const recognitionConstructor = useMemo(
     () => getSpeechRecognitionConstructor(),
@@ -79,20 +80,34 @@ export const useLiveTranscription = () => {
 
     recognition.onresult = (event) => {
       let interim = "";
-      let finalText = finalTranscriptRef.current;
+      const newFinalParts: string[] = [];
 
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const result = event.results[i];
         const text = result?.[0]?.transcript ?? "";
         if (result.isFinal) {
-          finalText = `${finalText} ${text}`.trim();
+          // Skip already-processed final results to prevent text duplication
+          // (Web Speech API may re-deliver the same results)
+          if (processedFinalIndicesRef.current.has(i)) continue;
+          processedFinalIndicesRef.current.add(i);
+          newFinalParts.push(text);
         } else {
           interim = `${interim} ${text}`.trim();
         }
       }
 
-      finalTranscriptRef.current = finalText;
-      const combined = [finalText, interim].filter(Boolean).join(" ").trim();
+      if (newFinalParts.length > 0) {
+        const previousFinal = finalTranscriptRef.current;
+        finalTranscriptRef.current = [previousFinal, ...newFinalParts]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+      }
+
+      const combined = [finalTranscriptRef.current, interim]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
       setTranscript(combined);
     };
 
@@ -125,6 +140,7 @@ export const useLiveTranscription = () => {
     setError(null);
     setTranscript("");
     finalTranscriptRef.current = "";
+    processedFinalIndicesRef.current = new Set();
 
     try {
       recognition.start();

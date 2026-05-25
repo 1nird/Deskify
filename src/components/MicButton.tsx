@@ -156,6 +156,11 @@ export const MicButton = ({
   const handleToggle = useCallback(() => {
     if (disabled) return;
     if (isListening) {
+      // Clear any pending silence/auto-send timer when manually stopping
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       stop();
       // Pause VAD
       try { vad.pause(); } catch { /* VAD may not be started */ }
