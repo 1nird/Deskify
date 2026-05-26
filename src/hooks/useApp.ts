@@ -31,13 +31,36 @@ export const useApp = () => {
 
   // Listen for updates discovered by the silent background updater
   useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const setupListener = async () => {
+      try {
+        unlisten = await listen<any>("deskify://update-available", async () => {
+          console.log("[Updater] Received global update available event, checking updater...");
+          try {
+            const found = await check();
+            if (found) {
+              setUpdateAvailable(found);
+            }
+          } catch (err) {
+            console.error("Failed to check update in global listener:", err);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to setup global update listener:", err);
+      }
+    };
+    setupListener();
+
     const handler = (e: CustomEvent) => {
       if (e.detail) {
         setUpdateAvailable(e.detail);
       }
     };
     window.addEventListener('updateAvailable', handler as EventListener);
-    return () => window.removeEventListener('updateAvailable', handler as EventListener);
+    return () => {
+      window.removeEventListener('updateAvailable', handler as EventListener);
+      if (unlisten) unlisten();
+    };
   }, []);
 
   const applyUpdate = async (

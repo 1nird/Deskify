@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { emit } from "@tauri-apps/api/event";
 
 /** Avoid duplicate updater checks when multiple windows mount. */
 const UPDATER_CHECK_DEDUP_MS = 90_000;
@@ -52,6 +53,7 @@ export const Updater = () => {
         console.log(`[Updater] Update ${found.version} available — downloading…`);
         // Notify other components (AuthGate) about the available update
         window.dispatchEvent(new CustomEvent('updateAvailable', { detail: found }));
+        emit("deskify://update-available", { version: found.version }).catch(console.error);
         await found.downloadAndInstall((event) => {
           if (event.event === "Started") {
             console.log("[Updater] Download started...");
