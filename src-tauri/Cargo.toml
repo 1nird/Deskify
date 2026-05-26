@@ -1,6 +1,6 @@
 [package]
 name = "deskify"
-version = "5.8.0"
+version = "6.2.0"
 description = "Deskify - Your personal AI desktop automation assistant."
 authors = ["Deskify Team"]
 license = "MIT"
