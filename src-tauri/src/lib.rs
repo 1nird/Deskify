@@ -36,6 +36,109 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Walk up from the current executable to find the containing .app bundle path.
+#[cfg(target_os = "macos")]
+fn find_running_app_bundle(app_name: &str) -> Option<std::path::PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let mut path: &std::path::Path = &exe;
+
+    // Walk up looking for the .app directory (e.g. /Applications/Deskify.app/Contents/MacOS/deskify)
+    while let Some(parent) = path.parent() {
+        if let Some(name) = parent.file_name() {
+            let name_str = name.to_string_lossy();
+            if name_str.ends_with(".app") && name_str == app_name {
+                return Some(parent.to_path_buf());
+            }
+        }
+        path = parent;
+    }
+
+    None
+}
+
+/// Attempt to replace an existing .app bundle with the new one.
+/// Uses rename-then-copy-then-delete to avoid data loss if the copy fails.
+/// Returns true if the copy succeeded, false if it failed (e.g. TCC permission prompt).
+#[cfg(target_os = "macos")]
+fn try_replace_app_bundle(src: &std::path::Path, dst: &std::path::Path) -> bool {
+    // Move the old bundle out of the way first (rename, don't delete).
+    // This way if the copy fails, we can restore the old version.
+    let backup_path = if dst.exists() {
+        let backup = dst.with_extension("app.old");
+        // Remove any previous .old backup
+        if backup.exists() {
+            let _ = std::fs::remove_dir_all(&backup);
+        }
+        if let Err(e) = std::fs::rename(dst, &backup) {
+            println!("[Updater:Rust] Could not rename old bundle: {}", e);
+            // Try to remove it instead (last resort — no backup to restore)
+            if let Err(e2) = std::fs::remove_dir_all(dst) {
+                println!("[Updater:Rust] Could not remove old bundle: {}", e2);
+                return false;
+            }
+            None // Rename failed (removed instead), nothing to restore
+        } else {
+            Some(backup) // Rename succeeded, can restore from here
+        }
+    } else {
+        None
+    };
+
+    // Use ditto for macOS bundle copy (preserves permissions, resource forks)
+    let mut copy_ok = match std::process::Command::new("ditto")
+        .args([&src.to_string_lossy(), &dst.to_string_lossy()])
+        .status()
+    {
+        Ok(status) if status.success() => true,
+        Ok(status) => {
+            println!(
+                "[Updater:Rust] ditto exited with code {:?}, trying cp fallback...",
+                status.code()
+            );
+            false
+        }
+        Err(e) => {
+            println!("[Updater:Rust] ditto failed: {}, trying cp fallback...", e);
+            false
+        }
+    };
+
+    if !copy_ok {
+        // Fall back to cp -R
+        copy_ok = match std::process::Command::new("cp")
+            .args(["-R", &src.to_string_lossy(), &dst.to_string_lossy()])
+            .status()
+        {
+            Ok(status) if status.success() => true,
+            Ok(status) => {
+                println!(
+                    "[Updater:Rust] cp -R exited with code {:?}",
+                    status.code()
+                );
+                false
+            }
+            Err(e) => {
+                println!("[Updater:Rust] cp -R failed: {}", e);
+                false
+            }
+        };
+    }
+
+    if copy_ok {
+        // Copy succeeded — clean up the backup
+        if let Some(backup) = backup_path {
+            let _ = std::fs::remove_dir_all(&backup);
+        }
+        true
+    } else {
+        // Copy failed — restore the old version from backup
+        if let Some(backup) = backup_path {
+            let _ = std::fs::rename(&backup, dst);
+        }
+        false
+    }
+}
+
 /// Download an installer from a URL and run it.
 /// Used as a fallback when the updater plugin's signature verification fails.
 #[tauri::command]
@@ -82,21 +185,141 @@ async fn download_and_run_installer(url: String) -> Result<String, String> {
 
     println!("[Updater:Rust] Installer saved to: {}", file_path.display());
 
+    let file_name_lower = file_name.to_lowercase();
+
+    // ── Windows: .exe / .msi ──
     #[cfg(target_os = "windows")]
     {
-        // Use cmd /C start to properly detach the installer process
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &file_path.to_string_lossy().to_string()])
-            .spawn()
-            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+        if file_name_lower.ends_with(".msi") {
+            // msiexec runs the MSI installer detached
+            std::process::Command::new("msiexec")
+                .args(["/i", &file_path.to_string_lossy(), "/passive"])
+                .spawn()
+                .map_err(|e| format!("Failed to launch MSI installer: {}", e))?;
+        } else {
+            // .exe (NSIS) — use cmd /C start to properly detach
+            std::process::Command::new("cmd")
+                .args(["/C", "start", "", &file_path.to_string_lossy().to_string()])
+                .spawn()
+                .map_err(|e| format!("Failed to launch installer: {}", e))?;
+        }
     }
 
-    #[cfg(not(target_os = "windows"))]
+    // ── macOS: .app.tar.gz ──
+    #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(&file_path)
-            .spawn()
-            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+        if file_name_lower.ends_with(".tar.gz") || file_name_lower.ends_with(".tgz") {
+            // Extract to a temp staging directory
+            let extract_dir = temp_dir.join("deskify-update");
+            if extract_dir.exists() {
+                std::fs::remove_dir_all(&extract_dir)
+                    .map_err(|e| format!("Failed to clean extract dir: {}", e))?;
+            }
+            std::fs::create_dir_all(&extract_dir)
+                .map_err(|e| format!("Failed to create extract dir: {}", e))?;
+
+            println!(
+                "[Updater:Rust] Extracting tar.gz to: {}",
+                extract_dir.display()
+            );
+
+            let status = std::process::Command::new("tar")
+                .args(["-xzf", &file_path.to_string_lossy(), "-C", &extract_dir.to_string_lossy()])
+                .status()
+                .map_err(|e| format!("Failed to run tar: {}", e))?;
+
+            if !status.success() {
+                return Err(format!("tar extraction failed with exit code: {:?}", status.code()));
+            }
+
+            // Find the .app bundle in the extracted directory
+            let app_path = std::fs::read_dir(&extract_dir)
+                .map_err(|e| format!("Failed to read extract dir: {}", e))?
+                .filter_map(|entry| entry.ok())
+                .find(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .ends_with(".app")
+                })
+                .map(|entry| entry.path());
+
+            let app_path = app_path.ok_or("No .app bundle found after extraction".to_string())?;
+            println!("[Updater:Rust] Found .app bundle: {}", app_path.display());
+
+            // Resolve the running app's bundle location instead of assuming /Applications.
+            // Walk up from current_exe() until we find the .app directory.
+            let app_name = app_path
+                .file_name()
+                .ok_or("Invalid .app path".to_string())?
+                .to_string_lossy()
+                .to_string();
+
+            let target_path = find_running_app_bundle(&app_name)
+                .unwrap_or_else(|| std::path::PathBuf::from("/Applications").join(&app_name));
+
+            println!("[Updater:Rust] Target bundle path: {}", target_path.display());
+
+            // Try to copy the new bundle over the existing one.
+            // On macOS Catalina+ this may trigger a TCC permission prompt or fail;
+            // if it does, we fall back to launching the extracted app directly.
+            let copy_succeeded = try_replace_app_bundle(&app_path, &target_path);
+
+            if copy_succeeded {
+                println!("[Updater:Rust] Launching updated app from {}", target_path.display());
+                std::process::Command::new("open")
+                    .arg(&target_path)
+                    .spawn()
+                    .map_err(|e| format!("Failed to launch app: {}", e))?;
+            } else {
+                // Copy failed (likely permission issue) — launch directly from temp.
+                // The user gets the new version but it won't persist after reboot.
+                println!("[Updater:Rust] Copy failed, launching directly from temp...");
+                std::process::Command::new("open")
+                    .arg(&app_path)
+                    .spawn()
+                    .map_err(|e| format!("Failed to launch app from temp: {}", e))?;
+            }
+        } else {
+            // Other macOS formats (e.g. .dmg) — use open
+            std::process::Command::new("open")
+                .arg(&file_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open file: {}", e))?;
+        }
+    }
+
+    // ── Linux: .AppImage / .deb / .rpm ──
+    #[cfg(target_os = "linux")]
+    {
+        if file_name_lower.ends_with(".appimage") {
+            // Make executable and run directly
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&file_path)
+                .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&file_path, perms)
+                .map_err(|e| format!("Failed to chmod +x: {}", e))?;
+
+            println!("[Updater:Rust] Launching AppImage...");
+            std::process::Command::new(&file_path)
+                .spawn()
+                .map_err(|e| format!("Failed to launch AppImage: {}", e))?;
+        } else if file_name_lower.ends_with(".deb") || file_name_lower.ends_with(".rpm") {
+            // Open with system package manager GUI (prompts user for password)
+            println!("[Updater:Rust] Opening package with system handler...");
+            std::process::Command::new("xdg-open")
+                .arg(&file_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open package: {}", e))?;
+        } else {
+            // Unknown format — try xdg-open as generic fallback
+            std::process::Command::new("xdg-open")
+                .arg(&file_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open file: {}", e))?;
+        }
     }
 
     println!("[Updater:Rust] Installer launched successfully");
