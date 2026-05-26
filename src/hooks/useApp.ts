@@ -69,48 +69,133 @@ export const useApp = () => {
   const applyCustomUpdateFallback = async (
     onProgress?: (pct: number) => void
   ): Promise<{ success: boolean; error?: string }> => {
+    const startedAt = Date.now();
+    console.log("[Updater:Custom:Manual] ===== Manual custom update fallback started =====");
+
     try {
-      console.log("[Updater:Custom] Fetching latest.json...");
+      // ── Step 1: Fetch latest.json ──
+      console.log("[Updater:Custom:Manual] Step 1/5: Fetching latest.json from GitHub...");
+      onProgress?.(5);
       const res = await fetch(
         "https://github.com/1nird/Deskify/releases/latest/download/latest.json"
+      );
+      console.log(
+        `[Updater:Custom:Manual]   HTTP ${res.status} ${res.statusText} (${res.headers.get("content-type")})`
       );
       if (!res.ok) {
         return { success: false, error: `HTTP ${res.status}: ${res.statusText}` };
       }
 
+      // ── Step 2: Parse JSON and extract version ──
       const json = await res.json();
       const latestVersion = json?.version;
       if (!latestVersion) {
+        console.error("[Updater:Custom:Manual] ❌ latest.json missing 'version' field.");
         return { success: false, error: "latest.json missing version" };
       }
 
+      const availablePlatforms = json.platforms ? Object.keys(json.platforms) : [];
+      console.log(
+        `[Updater:Custom:Manual]   latest.json version: v${latestVersion}`
+      );
+      console.log(
+        `[Updater:Custom:Manual]   Available platforms: [${availablePlatforms.join(", ")}]`
+      );
+
+      // ── Step 3: Compare versions ──
       const currentVersion = await getVersion();
-      if (compareSemver(latestVersion, currentVersion) <= 0) {
+      const cmp = compareSemver(latestVersion, currentVersion);
+      console.log(
+        `[Updater:Custom:Manual] Step 2/5: Version comparison — current: v${currentVersion}, latest: v${latestVersion}`
+      );
+      console.log(
+        `[Updater:Custom:Manual]   semver compare result: ${cmp} (${cmp > 0 ? "UPDATE AVAILABLE ✅" : cmp < 0 ? "downgrade?" : "up to date"})`
+      );
+
+      if (cmp <= 0) {
+        console.log("[Updater:Custom:Manual] ✅ Already on the latest version — nothing to do.");
         return { success: false, error: "You are on the latest version." };
       }
 
+      // ── Step 4: Detect platform and find matching entry ──
+      console.log("[Updater:Custom:Manual] Step 3/5: Detecting platform...");
+      console.log(`[Updater:Custom:Manual]   navigator.platform: ${navigator.platform}`);
+      console.log(
+        `[Updater:Custom:Manual]   userAgent: ${navigator.userAgent.substring(0, 120)}...`
+      );
+
       let platformKey = detectPlatformKey();
+      console.log(
+        `[Updater:Custom:Manual]   Detected platform key: ${platformKey ?? "null (unknown OS)"}`
+      );
+
       let entry = platformKey ? json.platforms?.[platformKey] : null;
+
+      // macOS fallback
       if (!entry && platformKey === "darwin-aarch64") {
+        console.log(
+          "[Updater:Custom:Manual]   ⚠️ No entry for darwin-aarch64 — falling back to darwin-x86_64..."
+        );
         platformKey = "darwin-x86_64";
         entry = json.platforms?.[platformKey];
+        console.log(
+          `[Updater:Custom:Manual]   Fallback platform entry: ${entry ? "found ✅" : "not found ❌"}`
+        );
       }
+
       if (!entry?.url) {
+        console.error(
+          `[Updater:Custom:Manual] ❌ No download URL for platform key "${platformKey ?? "unknown"}".`
+        );
+        console.error(
+          `[Updater:Custom:Manual]   Available keys: [${availablePlatforms.join(", ")}]`
+        );
         return { success: false, error: `No download for platform ${platformKey}` };
       }
 
-      console.log(`[Updater:Custom] Downloading v${latestVersion} from ${entry.url}`);
+      const downloadUrl = entry.url;
+      const signature = (entry as any).signature;
+      console.log(
+        `[Updater:Custom:Manual] Step 4/5: Platform entry found — ${platformKey}`
+      );
+      console.log(
+        `[Updater:Custom:Manual]   Download URL: ${downloadUrl}`
+      );
+      console.log(
+        `[Updater:Custom:Manual]   Signature present: ${typeof signature === "string" ? `yes (${signature.replace(/\s/g, "").length} chars)` : "no"}`
+      );
+
       onProgress?.(10);
 
       emit("deskify://update-available", { version: latestVersion }).catch(console.error);
-      await invoke("download_and_run_installer", { url: entry.url });
+
+      // ── Step 5: Call Rust command ──
+      console.log(
+        "[Updater:Custom:Manual] Step 5/5: Invoking Rust download_and_run_installer..."
+      );
+      console.log(`[Updater:Custom:Manual]   URL: ${downloadUrl}`);
+
+      const invokeStart = Date.now();
+      await invoke("download_and_run_installer", { url: downloadUrl });
+      const invokeElapsed = Date.now() - invokeStart;
+      console.log(
+        `[Updater:Custom:Manual] ✅ Rust command SUCCEEDED (took ${invokeElapsed}ms) — installer launched.`
+      );
 
       onProgress?.(90);
-      // The NSIS installer handles closing the app + installing, so we
-      // intentionally do NOT call relaunch() — let the installer manage it.
+
+      const totalElapsed = Date.now() - startedAt;
+      console.log(
+        `[Updater:Custom:Manual] ===== Manual custom update fallback COMPLETE (total: ${totalElapsed}ms) =====`
+      );
       return { success: true };
     } catch (e) {
+      const totalElapsed = Date.now() - startedAt;
       const msg = e instanceof Error ? e.message : String(e);
+      console.error(
+        `[Updater:Custom:Manual] ❌ FAILED after ${totalElapsed}ms: ${msg}`
+      );
+      console.error("[Updater:Custom:Manual]   Full error:", e);
       return { success: false, error: msg || "Custom update failed." };
     }
   };

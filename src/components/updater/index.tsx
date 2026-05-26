@@ -123,46 +123,98 @@ export function detectPlatformKey(): string | null {
  * between the installer and the app restart.
  */
 async function customUpdateFallback(): Promise<void> {
-  console.log("[Updater:Custom] Fetching latest.json directly...");
+  const startedAt = Date.now();
+  console.log("[Updater:Custom] ===== Custom update fallback started =====");
+
+  // ── Step 1: Fetch latest.json ──
+  console.log("[Updater:Custom] Step 1/5: Fetching latest.json from GitHub...");
   const res = await fetch(LATEST_JSON_URL);
+  console.log(
+    `[Updater:Custom]   HTTP ${res.status} ${res.statusText} (${res.headers.get("content-type")})`
+  );
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
+  // ── Step 2: Parse JSON and extract version ──
   const json = await res.json();
   const latestVersion = json?.version;
   if (!latestVersion) {
+    console.error("[Updater:Custom] ❌ latest.json is missing the 'version' field.");
     throw new Error("latest.json missing version field");
   }
 
-  const currentVersion = await getVersion();
+  // Log available platforms for debugging
+  const availablePlatforms = json.platforms ? Object.keys(json.platforms) : [];
   console.log(
-    `[Updater:Custom] Current: v${currentVersion}, Latest: v${latestVersion}`
+    `[Updater:Custom]   latest.json version: v${latestVersion}`
+  );
+  console.log(
+    `[Updater:Custom]   Available platforms: [${availablePlatforms.join(", ")}]`
   );
 
-  if (compareSemver(latestVersion, currentVersion) <= 0) {
-    console.log("[Updater:Custom] App is up to date.");
+  // ── Step 3: Compare versions ──
+  const currentVersion = await getVersion();
+  const cmp = compareSemver(latestVersion, currentVersion);
+  console.log(
+    `[Updater:Custom] Step 2/5: Version comparison — current: v${currentVersion}, latest: v${latestVersion}`
+  );
+  console.log(
+    `[Updater:Custom]   semver compare result: ${cmp} (${cmp > 0 ? "UPDATE AVAILABLE ✅" : cmp < 0 ? "downgrade?" : "up to date"})`
+  );
+
+  if (cmp <= 0) {
+    console.log("[Updater:Custom] ✅ Already on the latest version — nothing to do.");
     return;
   }
 
+  // ── Step 4: Detect platform and find matching entry ──
+  console.log("[Updater:Custom] Step 3/5: Detecting platform...");
+  const userAgent = navigator.userAgent;
+  console.log(`[Updater:Custom]   navigator.platform: ${navigator.platform}`);
+  console.log(`[Updater:Custom]   userAgent: ${userAgent.substring(0, 120)}...`);
+
   let platformKey = detectPlatformKey();
+  console.log(
+    `[Updater:Custom]   Detected platform key: ${platformKey ?? "null (unknown OS)"}`
+  );
+
   let platformEntry = platformKey ? json.platforms?.[platformKey] : null;
 
   // macOS fallback: if aarch64 not found, try x86_64
   if (!platformEntry && platformKey === "darwin-aarch64") {
+    console.log(
+      "[Updater:Custom]   ⚠️ No entry for darwin-aarch64 — falling back to darwin-x86_64..."
+    );
     platformKey = "darwin-x86_64";
     platformEntry = json.platforms?.[platformKey];
+    console.log(
+      `[Updater:Custom]   Fallback platform entry: ${platformEntry ? "found ✅" : "not found ❌"}`
+    );
   }
 
   if (!platformEntry?.url) {
+    console.error(
+      `[Updater:Custom] ❌ No download URL for platform key "${platformKey ?? "unknown"}".`
+    );
+    console.error(
+      `[Updater:Custom]   Available keys: [${availablePlatforms.join(", ")}]`
+    );
     throw new Error(
       `No download URL for platform ${platformKey ?? "unknown"}`
     );
   }
 
   const downloadUrl = platformEntry.url;
+  const signature = (platformEntry as any).signature;
   console.log(
-    `[Updater:Custom] Update v${latestVersion} available — downloading from ${downloadUrl}`
+    `[Updater:Custom] Step 4/5: Platform entry found — ${platformKey}`
+  );
+  console.log(
+    `[Updater:Custom]   Download URL: ${downloadUrl}`
+  );
+  console.log(
+    `[Updater:Custom]   Signature present: ${typeof signature === "string" ? `yes (${signature.replace(/\s/g, "").length} chars)` : "no"}`
   );
 
   // Notify other components about the available update
@@ -175,14 +227,33 @@ async function customUpdateFallback(): Promise<void> {
     console.error
   );
 
-  // Call the Rust command to download & run the installer.
-  // The NSIS installer on Windows handles closing the app + installing,
-  // so we intentionally do NOT call relaunch() — let the installer manage the lifecycle.
-  console.log("[Updater:Custom] Calling Rust download_and_run_installer...");
-  await invoke("download_and_run_installer", { url: downloadUrl });
-
+  // ── Step 5: Call Rust command to download & run installer ──
   console.log(
-    "[Updater:Custom] Installer launched — installer will handle the update."
+    "[Updater:Custom] Step 5/5: Invoking Rust download_and_run_installer..."
+  );
+  console.log(`[Updater:Custom]   URL: ${downloadUrl}`);
+
+  const invokeStart = Date.now();
+  try {
+    await invoke("download_and_run_installer", { url: downloadUrl });
+    const elapsed = Date.now() - invokeStart;
+    console.log(
+      `[Updater:Custom] ✅ Rust command SUCCEEDED (took ${elapsed}ms) — installer launched.`
+    );
+  } catch (invokeErr) {
+    const elapsed = Date.now() - invokeStart;
+    const errMsg =
+      invokeErr instanceof Error ? invokeErr.message : String(invokeErr);
+    console.error(
+      `[Updater:Custom] ❌ Rust command FAILED after ${elapsed}ms: ${errMsg}`
+    );
+    console.error("[Updater:Custom]   Full error:", invokeErr);
+    throw invokeErr;
+  }
+
+  const totalElapsed = Date.now() - startedAt;
+  console.log(
+    `[Updater:Custom] ===== Custom update fallback COMPLETE (total: ${totalElapsed}ms) =====`
   );
 }
 
