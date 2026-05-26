@@ -1,7 +1,7 @@
 {
   "name": "deskify",
   "private": false,
-  "version": "6.2.0",
+  "version": "6.3.0",
   "//NOTE": "CRITICAL: When bumping version, also update version in src-tauri/tauri.conf.json and src-tauri/Cargo.toml!",
   "description": "Deskify - A lightning-fast, privacy-first AI desktop assistant.",
   "author": {
