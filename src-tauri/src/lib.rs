@@ -36,6 +36,73 @@ fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Download an installer from a URL and run it.
+/// Used as a fallback when the updater plugin's signature verification fails.
+#[tauri::command]
+async fn download_and_run_installer(url: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(600))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    println!("[Updater:Rust] Downloading installer from: {}", url);
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Download returned HTTP {}: {}",
+            response.status().as_u16(),
+            response.status().canonical_reason().unwrap_or("Unknown")
+        ));
+    }
+
+    let total = response.content_length().unwrap_or(0);
+    println!("[Updater:Rust] Content-Length: {} bytes", total);
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response body: {}", e))?;
+
+    println!("[Updater:Rust] Downloaded {} bytes", bytes.len());
+
+    let temp_dir = std::env::temp_dir();
+    let file_name = url
+        .split('/')
+        .last()
+        .unwrap_or("Deskify_Update.exe");
+    let file_path = temp_dir.join(file_name);
+
+    std::fs::write(&file_path, &bytes)
+        .map_err(|e| format!("Failed to write installer to {}: {}", file_path.display(), e))?;
+
+    println!("[Updater:Rust] Installer saved to: {}", file_path.display());
+
+    #[cfg(target_os = "windows")]
+    {
+        // Use cmd /C start to properly detach the installer process
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &file_path.to_string_lossy().to_string()])
+            .spawn()
+            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new("open")
+            .arg(&file_path)
+            .spawn()
+            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+    }
+
+    println!("[Updater:Rust] Installer launched successfully");
+    Ok("Installer launched".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Get PostHog API key
@@ -82,6 +149,7 @@ pub fn run() {
     let mut builder = builder
         .invoke_handler(tauri::generate_handler![
             get_app_version,
+            download_and_run_installer,
             window::set_window_height,
             window::open_dashboard,
             window::close_dashboard,

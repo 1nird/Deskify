@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTitles } from "@/hooks";
 import { check } from "@tauri-apps/plugin-updater";
-import { listen } from "@tauri-apps/api/event";
+import { listen, emit } from "@tauri-apps/api/event";
 import { safeLocalStorage, migrateLocalStorageToSQLite } from "@/lib";
 import { getShortcutsConfig } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { getVersion } from "@tauri-apps/api/app";
+import { compareSemver, detectPlatformKey } from "@/components/updater";
 
 
 export const useApp = () => {
@@ -63,6 +65,56 @@ export const useApp = () => {
     };
   }, []);
 
+  /** Custom fallback: fetch latest.json + download installer via Rust, bypassing the updater plugin. */
+  const applyCustomUpdateFallback = async (
+    onProgress?: (pct: number) => void
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log("[Updater:Custom] Fetching latest.json...");
+      const res = await fetch(
+        "https://github.com/1nird/Deskify/releases/latest/download/latest.json"
+      );
+      if (!res.ok) {
+        return { success: false, error: `HTTP ${res.status}: ${res.statusText}` };
+      }
+
+      const json = await res.json();
+      const latestVersion = json?.version;
+      if (!latestVersion) {
+        return { success: false, error: "latest.json missing version" };
+      }
+
+      const currentVersion = await getVersion();
+      if (compareSemver(latestVersion, currentVersion) <= 0) {
+        return { success: false, error: "You are on the latest version." };
+      }
+
+      let platformKey = detectPlatformKey();
+      let entry = platformKey ? json.platforms?.[platformKey] : null;
+      if (!entry && platformKey === "darwin-aarch64") {
+        platformKey = "darwin-x86_64";
+        entry = json.platforms?.[platformKey];
+      }
+      if (!entry?.url) {
+        return { success: false, error: `No download for platform ${platformKey}` };
+      }
+
+      console.log(`[Updater:Custom] Downloading v${latestVersion} from ${entry.url}`);
+      onProgress?.(10);
+
+      emit("deskify://update-available", { version: latestVersion }).catch(console.error);
+      await invoke("download_and_run_installer", { url: entry.url });
+
+      onProgress?.(90);
+      // The NSIS installer handles closing the app + installing, so we
+      // intentionally do NOT call relaunch() — let the installer manage it.
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { success: false, error: msg || "Custom update failed." };
+    }
+  };
+
   const applyUpdate = async (
     onProgress?: (pct: number) => void
   ): Promise<{ success: boolean; error?: string }> => {
@@ -70,7 +122,8 @@ export const useApp = () => {
     try {
       const freshUpdate = await check();
       if (!freshUpdate) {
-        return { success: false, error: "No update available. You are on the latest version." };
+        // Try custom fallback in case check() returned null but there IS an update
+        return await applyCustomUpdateFallback(onProgress);
       }
 
       console.log(`[Updater] Update ${freshUpdate.version} found — downloading…`);
@@ -98,6 +151,13 @@ export const useApp = () => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[Updater] Auto-update failed:", e);
+
+      // Fallback on signature parse errors
+      if (msg.includes("Invalid symbol")) {
+        console.log("[Updater] Signature error — trying custom fallback...");
+        return await applyCustomUpdateFallback(onProgress);
+      }
+
       return { success: false, error: msg || "Update failed. Check your connection and try again." };
     }
   };

@@ -2,10 +2,15 @@ import { useEffect, useRef } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { emit } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 
 /** Avoid duplicate updater checks when multiple windows mount. */
 const UPDATER_CHECK_DEDUP_MS = 90_000;
 const UPDATER_CHECK_STORAGE_KEY = "deskify_updater_last_check_ms";
+
+const LATEST_JSON_URL =
+  "https://github.com/1nird/Deskify/releases/latest/download/latest.json";
 
 function shouldSkipUpdaterCheckDueToDedup(): boolean {
   try {
@@ -82,10 +87,114 @@ function resetSignatureFailCount() {
 }
 
 /**
+ * Simple semver comparison: returns positive if a > b, negative if a < b, 0 if equal.
+ */
+export function compareSemver(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
+}
+
+/**
+ * Detect the current platform key used in latest.json.
+ */
+export function detectPlatformKey(): string | null {
+  const p = navigator.platform?.toLowerCase() ?? "";
+  if (p.includes("win")) return "windows-x86_64-nsis";
+  // macOS: we don't differentiate arm vs x64 here — if arm fails, fall back to x64
+  if (p.includes("mac")) return "darwin-aarch64";
+  if (p.includes("linux")) return "linux-x86_64";
+  return null;
+}
+
+/**
+ * Custom update flow that fetches latest.json directly, compares versions,
+ * downloads the installer via Rust, and launches it.
+ * Completely bypasses the Tauri updater plugin's minisign signature verification.
+ *
+ * On Windows (NSIS), the installer handles closing the app and installing —
+ * we deliberately do NOT call relaunch() here to avoid a race condition
+ * between the installer and the app restart.
+ */
+async function customUpdateFallback(): Promise<void> {
+  console.log("[Updater:Custom] Fetching latest.json directly...");
+  const res = await fetch(LATEST_JSON_URL);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+
+  const json = await res.json();
+  const latestVersion = json?.version;
+  if (!latestVersion) {
+    throw new Error("latest.json missing version field");
+  }
+
+  const currentVersion = await getVersion();
+  console.log(
+    `[Updater:Custom] Current: v${currentVersion}, Latest: v${latestVersion}`
+  );
+
+  if (compareSemver(latestVersion, currentVersion) <= 0) {
+    console.log("[Updater:Custom] App is up to date.");
+    return;
+  }
+
+  let platformKey = detectPlatformKey();
+  let platformEntry = platformKey ? json.platforms?.[platformKey] : null;
+
+  // macOS fallback: if aarch64 not found, try x86_64
+  if (!platformEntry && platformKey === "darwin-aarch64") {
+    platformKey = "darwin-x86_64";
+    platformEntry = json.platforms?.[platformKey];
+  }
+
+  if (!platformEntry?.url) {
+    throw new Error(
+      `No download URL for platform ${platformKey ?? "unknown"}`
+    );
+  }
+
+  const downloadUrl = platformEntry.url;
+  console.log(
+    `[Updater:Custom] Update v${latestVersion} available — downloading from ${downloadUrl}`
+  );
+
+  // Notify other components about the available update
+  window.dispatchEvent(
+    new CustomEvent("updateAvailable", {
+      detail: { version: latestVersion, downloadUrl },
+    })
+  );
+  emit("deskify://update-available", { version: latestVersion }).catch(
+    console.error
+  );
+
+  // Call the Rust command to download & run the installer.
+  // The NSIS installer on Windows handles closing the app + installing,
+  // so we intentionally do NOT call relaunch() — let the installer manage the lifecycle.
+  console.log("[Updater:Custom] Calling Rust download_and_run_installer...");
+  await invoke("download_and_run_installer", { url: downloadUrl });
+
+  console.log(
+    "[Updater:Custom] Installer launched — installer will handle the update."
+  );
+}
+
+/**
  * Discord-style updater: check shortly after startup, download + install in the
  * background, then relaunch. The installer wizard will appear on Windows (NSIS
  * limitation — Tauri v2 does not support silent NSIS installs). After the
  * wizard completes, the updated app launches automatically.
+ *
+ * First tries the built-in Tauri updater plugin. If signature verification fails
+ * ("Invalid symbol" error), falls back to a custom download+install flow that
+ * bypasses minisign entirely.
  *
  * Transient failures (network, HTTP) are logged silently and retried next
  * launch. Persistent signature failures (key mismatch, malformed manifest)
@@ -103,10 +212,17 @@ export const Updater = () => {
     ran.current = true;
 
     const DEBUG = (() => {
-      try { return localStorage.getItem("deskify_updater_debug") === "1"; } catch { return false; }
+      try {
+        return localStorage.getItem("deskify_updater_debug") === "1";
+      } catch {
+        return false;
+      }
     })();
 
-    if (DEBUG) console.log("[Updater:DEBUG] Verbose logging enabled. Clear localStorage key 'deskify_updater_debug' to disable.");
+    if (DEBUG)
+      console.log(
+        "[Updater:DEBUG] Verbose logging enabled. Clear localStorage key 'deskify_updater_debug' to disable."
+      );
 
     const run = async () => {
       if (shouldSkipUpdaterCheckDueToDedup()) return;
@@ -116,21 +232,25 @@ export const Updater = () => {
       if (DEBUG) {
         try {
           console.log("[Updater:DEBUG] Fetching latest.json directly...");
-          const res = await fetch("https://github.com/1nird/Deskify/releases/latest/download/latest.json");
-          console.log(`[Updater:DEBUG] HTTP ${res.status} ${res.statusText}`);
-          console.log(`[Updater:DEBUG] Content-Type: ${res.headers.get("content-type")}`);
+          const res = await fetch(LATEST_JSON_URL);
+          console.log(
+            `[Updater:DEBUG] HTTP ${res.status} ${res.statusText}`
+          );
+          console.log(
+            `[Updater:DEBUG] Content-Type: ${res.headers.get("content-type")}`
+          );
           const raw = await res.text();
           console.log(`[Updater:DEBUG] Raw body length: ${raw.length} bytes`);
 
-          // Check for BOM
           const firstChar = raw.charCodeAt(0);
-          if (firstChar === 0xFEFF) {
+          if (firstChar === 0xfeff) {
             console.warn("[Updater:DEBUG] ⚠️ BOM DETECTED at start of response!");
           } else {
-            console.log(`[Updater:DEBUG] First char: U+${firstChar.toString(16).toUpperCase()} (no BOM)`);
+            console.log(
+              `[Updater:DEBUG] First char: U+${firstChar.toString(16).toUpperCase()} (no BOM)`
+            );
           }
 
-          // Parse and dump each platform's signature
           try {
             const json = JSON.parse(raw);
             console.log(`[Updater:DEBUG] Parsed JSON version: ${json.version}`);
@@ -141,7 +261,6 @@ export const Updater = () => {
                   console.log(`[Updater:DEBUG]   ${platform}: NO SIGNATURE`);
                   continue;
                 }
-                // Show first/last chars and check for invalid base64
                 const cleaned = sig.replace(/\s/g, "");
                 let invalidInfo = "";
                 for (let i = 0; i < Math.min(cleaned.length, 100); i++) {
@@ -151,9 +270,15 @@ export const Updater = () => {
                   }
                 }
                 if (!invalidInfo) invalidInfo = " ✅ clean";
-                console.log(`[Updater:DEBUG]   ${platform}: ${cleaned.length}c base64${invalidInfo}`);
-                console.log(`[Updater:DEBUG]     first: ${cleaned.substring(0, 40)}...`);
-                console.log(`[Updater:DEBUG]     last:  ...${cleaned.substring(cleaned.length - 20)}`);
+                console.log(
+                  `[Updater:DEBUG]   ${platform}: ${cleaned.length}c base64${invalidInfo}`
+                );
+                console.log(
+                  `[Updater:DEBUG]     first: ${cleaned.substring(0, 40)}...`
+                );
+                console.log(
+                  `[Updater:DEBUG]     last:  ...${cleaned.substring(cleaned.length - 20)}`
+                );
               }
             }
           } catch (parseErr) {
@@ -166,26 +291,36 @@ export const Updater = () => {
       // ── END DEBUG ──
 
       try {
-        if (DEBUG) console.log("[Updater:DEBUG] Calling check() via tauri-plugin-updater...");
+        if (DEBUG)
+          console.log(
+            "[Updater:DEBUG] Calling check() via tauri-plugin-updater..."
+          );
         const found = await check({ timeout: 60_000 });
         if (!found) {
           console.log("[Updater] App is up to date.");
-          // Successful check (even if no update) resets the sig-fail counter
           resetSignatureFailCount();
           return;
         }
 
-        console.log(`[Updater] Update ${found.version} available — downloading…`);
-        // Notify other components (AuthGate) about the available update
-        window.dispatchEvent(new CustomEvent('updateAvailable', { detail: found }));
-        emit("deskify://update-available", { version: found.version }).catch(console.error);
+        console.log(
+          `[Updater] Update ${found.version} available — downloading…`
+        );
+        window.dispatchEvent(
+          new CustomEvent("updateAvailable", { detail: found })
+        );
+        emit("deskify://update-available", { version: found.version }).catch(
+          console.error
+        );
         await found.downloadAndInstall((event) => {
           if (event.event === "Started") {
             console.log("[Updater] Download started...");
           } else if (event.event === "Progress") {
             const downloaded = (event.data as any)?.downloaded ?? 0;
             const total = (event.data as any)?.total;
-            const pct = total && total > 0 ? Math.min(99, Math.round((downloaded / total) * 100)) : 0;
+            const pct =
+              total && total > 0
+                ? Math.min(99, Math.round((downloaded / total) * 100))
+                : 0;
             if (pct > 0) console.log(`[Updater] Download progress: ${pct}%`);
           } else if (event.event === "Finished") {
             console.log("[Updater] Download complete — launching installer…");
@@ -198,15 +333,41 @@ export const Updater = () => {
         const category = classifyUpdaterError(msg);
         console.warn(`[Updater] Silent update failed [${category}]:`, msg);
 
+        // ── FALLBACK: On signature error, try custom update flow ──
+        if (category === "SIGNATURE_PARSE" || category === "SIGNATURE_VERIFY") {
+          console.log(
+            "[Updater] Signature verification failed — attempting custom update fallback..."
+          );
+          try {
+            await customUpdateFallback();
+            return; // custom fallback succeeded, don't open download page
+          } catch (fallbackErr) {
+            const fbMsg =
+              fallbackErr instanceof Error
+                ? fallbackErr.message
+                : String(fallbackErr);
+            console.warn(
+              "[Updater] Custom update fallback also failed:",
+              fbMsg
+            );
+            // Fall through to the persistent failure check
+          }
+        }
+
         // Only open the download page for persistent signature problems,
         // not for transient network hiccups.
         if (trackAndShouldOpenFallback(category)) {
           try {
             const { openUrl } = await import("@tauri-apps/plugin-opener");
-            console.log("[Updater] Persistent signature failure — opening download page as fallback…");
+            console.log(
+              "[Updater] Persistent signature failure — opening download page as fallback…"
+            );
             await openUrl("https://deskify.site/download");
           } catch (fallbackErr) {
-            console.warn("[Updater] Could not open fallback download page:", fallbackErr);
+            console.warn(
+              "[Updater] Could not open fallback download page:",
+              fallbackErr
+            );
           }
         }
       }
@@ -229,7 +390,18 @@ export async function checkAndApplyUpdateSilently(): Promise<boolean> {
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[Updater] Manual check failed [${classifyUpdaterError(msg)}]:`, msg);
+    const category = classifyUpdaterError(msg);
+    console.warn(`[Updater] Manual check failed [${category}]:`, msg);
+
+    // Fallback on signature errors
+    if (category === "SIGNATURE_PARSE" || category === "SIGNATURE_VERIFY") {
+      try {
+        await customUpdateFallback();
+        return true;
+      } catch (fbErr) {
+        console.warn("[Updater] Manual custom fallback also failed:", fbErr);
+      }
+    }
     return false;
   }
 }
