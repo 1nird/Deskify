@@ -31,20 +31,36 @@ export const useApp = () => {
     }
   };
 
-  // Listen for updates discovered by the silent background updater
+  // Listen for updates discovered by the silent background updater (any window)
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     const setupListener = async () => {
       try {
-        unlisten = await listen<any>("deskify://update-available", async () => {
-          console.log("[Updater] Received global update available event, checking updater...");
+        unlisten = await listen<any>("deskify://update-available", async (event) => {
+          const payload = event.payload;
+          console.log("[Updater] Global update event received:", payload);
+
+          // If the event has a real Tauri update object (from check()), use it directly
+          if (payload && typeof payload.downloadAndInstall === 'function') {
+            setUpdateAvailable(payload);
+            return;
+          }
+
+          // Otherwise payload is { version } from custom fallback — try check() first
           try {
             const found = await check();
             if (found) {
+              console.log("[Updater] Plugin check() found update:", found.version);
               setUpdateAvailable(found);
+              return;
             }
           } catch (err) {
-            console.error("Failed to check update in global listener:", err);
+            console.log("[Updater] Plugin check() failed (expected in local test mode), using payload version");
+          }
+
+          // Fallback: use the version from the event payload to show update UI
+          if (payload?.version) {
+            setUpdateAvailable({ version: payload.version, _customFallback: true });
           }
         });
       } catch (err) {
@@ -64,6 +80,7 @@ export const useApp = () => {
       if (unlisten) unlisten();
     };
   }, []);
+
 
   /** Custom fallback: fetch latest.json + download installer via Rust, bypassing the updater plugin. */
   const applyCustomUpdateFallback = async (
