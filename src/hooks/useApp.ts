@@ -86,6 +86,9 @@ export const useApp = () => {
         if (!entry && platformKey === "darwin-aarch64") {
           entry = json.platforms?.["darwin-x86_64"];
         }
+        if (!entry && platformKey === "windows-x86_64-nsis") {
+          entry = json.platforms?.["windows-x86_64"];
+        }
         const downloadUrl: string = entry?.url ?? "";
         setUpdateAvailable({ version: json.version, downloadUrl });
         return { version: json.version, downloadUrl };

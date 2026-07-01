@@ -16,8 +16,8 @@ export const DashboardLayout = () => {
       onReset={() => console.log("Reset")}
     >
       {/* Outer: pass-through; inner: actual UI hitbox (rectangular; rounded look is visual only) */}
-      <div className="flex h-screen w-screen items-center justify-center bg-transparent p-3 pointer-events-none">
-        <div className="relative flex h-full w-full max-h-full max-w-full flex-col overflow-hidden rounded-xl border-0 bg-background pointer-events-auto">
+      <div className="flex h-screen w-screen items-center justify-center bg-background pointer-events-none">
+        <div className="relative flex h-full w-full max-h-full max-w-full flex-col overflow-hidden border-0 bg-background pointer-events-auto">
 
           <div
             className="absolute left-64 right-32 top-0 z-[70] h-10 select-none"

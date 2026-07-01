@@ -8,7 +8,7 @@ const LATEST_JSON_URL =
 /**
  * Simple semver comparison: returns positive if a > b, negative if a < b, 0 if equal.
  */
-export function compareSemver(a: string, b: string): number {
+function compareSemver(a: string, b: string): number {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -61,10 +61,14 @@ async function checkForUpdates(): Promise<void> {
   let platformKey = detectPlatformKey();
   let platformEntry = platformKey ? json.platforms?.[platformKey] : null;
 
-  // macOS fallback: if aarch64 not found, try x86_64
+  // Fallbacks for platform key mismatches in latest.json
   if (!platformEntry && platformKey === "darwin-aarch64") {
-    platformKey = "darwin-x86_64";
-    platformEntry = json.platforms?.[platformKey];
+    platformEntry = json.platforms?.["darwin-x86_64"];
+    if (platformEntry) platformKey = "darwin-x86_64";
+  }
+  if (!platformEntry && platformKey === "windows-x86_64-nsis") {
+    platformEntry = json.platforms?.["windows-x86_64"];
+    if (platformEntry) platformKey = "windows-x86_64";
   }
 
   if (!platformEntry?.url) {

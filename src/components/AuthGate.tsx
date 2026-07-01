@@ -5,7 +5,6 @@ import { Button } from "@/components";
 import { useAuth } from "@/contexts/auth.context";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import type { GoogleProfile } from "@/contexts/auth.context";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   clearOAuthFragmentFromUrl,
   parseDesktopAuthProfile,
@@ -185,7 +184,7 @@ export const AuthGate = ({ children }: Props) => {
   }, [isAuthenticated, signInWithGoogleProfile]);
 
   // Only show the update overlay when a real update is available and we're in the dashboard window.
-  if (updateAvailable && updateAvailable.version && getCurrentWindow().label === "dashboard") {
+  if (updateAvailable && updateAvailable.version) {
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-transparent pointer-events-auto border-0">
           <div className="w-full max-w-[420px] rounded-[32px] border border-emerald-500/20 bg-[#0A0A0A] backdrop-filter backdrop-blur-lg bg-opacity-70 p-8 shadow-[0_0_50px_-12px_rgba(16,185,129,0.2)]">
