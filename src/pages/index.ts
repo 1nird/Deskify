@@ -5,5 +5,5 @@ export { default as App } from "./app";
 export { default as SystemPrompts } from "./system-prompts";
 export { default as Settings } from "./settings";
 export { default as Shortcuts } from "./shortcuts";
-
 export { default as Screenshot } from "./screenshot";
+export { default as Automation } from "./automation";

@@ -8,14 +8,13 @@ import {
   Shortcuts,
   Screenshot,
   Chats,
+  Automation,
 } from "@/pages";
 import { DashboardLayout } from "@/layouts";
-import { Updater } from "@/components";
 
 export default function AppRoutes() {
   return (
     <Router>
-      <Updater />
       <Routes>
         <Route path="/" element={<App />} />
         <Route element={<DashboardLayout />}>
@@ -25,6 +24,7 @@ export default function AppRoutes() {
           <Route path="/chats/view/:conversationId" element={<ViewChat />} />
           <Route path="/shortcuts" element={<Shortcuts />} />
           <Route path="/screenshot" element={<Screenshot />} />
+          <Route path="/automation" element={<Automation />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

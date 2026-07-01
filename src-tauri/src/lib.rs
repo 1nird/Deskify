@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod activate;
 mod api;
+mod automation;
 mod capture;
 mod db;
 mod shortcuts;
@@ -405,6 +406,22 @@ pub fn run() {
             api::check_license_status,
             api::get_activity,
             shortcuts::toggle_main_window,
+            automation::automation_mouse_move,
+            automation::automation_mouse_click,
+            automation::automation_mouse_double_click,
+            automation::automation_mouse_down,
+            automation::automation_mouse_up,
+            automation::automation_key_press,
+            automation::automation_key_combo,
+            automation::automation_type_text,
+            automation::automation_get_mouse_position,
+            automation::automation_scroll,
+            automation::automation_wait,
+            automation::automation_open_app,
+            automation::automation_run_command,
+            automation::automation_get_screen_size,
+            automation::automation_capture_screen,
+            automation::automation_execute_steps,
             window::set_content_protected,
             window::set_ignore_cursor_events,
         ])

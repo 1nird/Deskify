@@ -9,6 +9,7 @@ import {
   ArrowUpCircleIcon,
   PlayIcon,
   Bug,
+  Bot,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { GithubIcon, InstagramIcon, TikTokIcon } from "@/components";
@@ -37,6 +38,11 @@ export const useMenuItems = (isPremium?: boolean) => {
       icon: MonitorIcon,
       label: "Screenshot",
       href: "/screenshot",
+    },
+    {
+      icon: Bot,
+      label: "Automation",
+      href: "/automation",
     },
     {
       icon: SquareSlashIcon,

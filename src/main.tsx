@@ -6,6 +6,7 @@ import { AppProvider, AuthProvider, ThemeProvider } from "./contexts";
 import "./global.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import AppRoutes from "./routes";
+import { Updater } from "@/components";
 
 const currentWindow = getCurrentWindow();
 const windowLabel = currentWindow.label;
@@ -25,6 +26,7 @@ if (windowLabel.startsWith("capture-overlay-")) {
       <ThemeProvider>
         <AppProvider>
           <AuthProvider>
+            <Updater />
             <AuthGate>
               <AppRoutes />
             </AuthGate>
