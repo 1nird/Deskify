@@ -1,4 +1,3 @@
-use base64::Engine;
 use enigo::*;
 use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
@@ -17,58 +16,73 @@ pub struct AutomationStep {
 
 #[tauri::command]
 pub fn automation_mouse_move(x: i32, y: i32) -> Result<(), String> {
-    let mut enigo = Enigo::new();
-    enigo.mouse_move_to(x, y);
-    Ok(())
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
+    enigo
+        .mouse_move_to(x, y)
+        .map_err(|e| format!("Failed to move mouse: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_mouse_click(button: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo.mouse_click(btn);
-    Ok(())
+    enigo
+        .mouse_click(btn)
+        .map_err(|e| format!("Failed to click: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_mouse_double_click(button: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo.mouse_click(btn);
+    enigo
+        .mouse_click(btn)
+        .map_err(|e| format!("Failed first click: {e}"))?;
     thread::sleep(Duration::from_millis(80));
-    enigo.mouse_click(btn);
-    Ok(())
+    enigo
+        .mouse_click(btn)
+        .map_err(|e| format!("Failed second click: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_mouse_down(button: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo.mouse_down(btn);
-    Ok(())
+    enigo
+        .mouse_down(btn)
+        .map_err(|e| format!("Failed mouse down: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_mouse_up(button: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo.mouse_up(btn);
-    Ok(())
+    enigo
+        .mouse_up(btn)
+        .map_err(|e| format!("Failed mouse up: {e}"))
 }
 
 // ─── Keyboard ──────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn automation_key_press(key: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let k = map_key(&key)?;
-    enigo.key_click(k);
-    Ok(())
+    enigo
+        .key_click(k)
+        .map_err(|e| format!("Failed to press key '{key}': {e}"))
 }
 
 #[tauri::command]
 pub fn automation_key_combo(keys: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let parts: Vec<&str> = keys.split(',').map(|s| s.trim()).collect();
     if parts.is_empty() {
         return Err("No keys provided".to_string());
@@ -76,16 +90,22 @@ pub fn automation_key_combo(keys: String) -> Result<(), String> {
 
     // Hold modifiers
     for part in &parts[..parts.len().saturating_sub(1)] {
-        enigo.key_down(map_key(part)?);
+        enigo
+            .key_down(map_key(part)?)
+            .map_err(|e| format!("Failed to hold '{part}': {e}"))?;
     }
 
     // Press and release the final key
     let last = parts.last().unwrap();
-    enigo.key_click(map_key(last)?);
+    enigo
+        .key_click(map_key(last)?)
+        .map_err(|e| format!("Failed to press '{last}': {e}"))?;
 
     // Release modifiers in reverse
     for part in parts[..parts.len().saturating_sub(1)].iter().rev() {
-        enigo.key_up(map_key(part)?);
+        enigo
+            .key_up(map_key(part)?)
+            .map_err(|e| format!("Failed to release '{part}': {e}"))?;
     }
 
     Ok(())
@@ -93,24 +113,31 @@ pub fn automation_key_combo(keys: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn automation_type_text(text: String) -> Result<(), String> {
-    let mut enigo = Enigo::new();
-    enigo.text(&text);
-    Ok(())
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
+    enigo
+        .text(&text)
+        .map_err(|e| format!("Failed to type text: {e}"))
 }
 
 // ─── Misc ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn automation_get_mouse_position() -> Result<(i32, i32), String> {
-    let enigo = Enigo::new();
-    Ok(enigo.mouse_location())
+    let enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
+    enigo
+        .mouse_location()
+        .map_err(|e| format!("Failed to get mouse position: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_scroll(amount: i32) -> Result<(), String> {
-    let mut enigo = Enigo::new();
-    enigo.scroll(amount, MouseAxis::Vertical);
-    Ok(())
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
+    enigo
+        .scroll(amount, Axis::Vertical)
+        .map_err(|e| format!("Failed to scroll: {e}"))
 }
 
 #[tauri::command]
@@ -126,21 +153,21 @@ pub fn automation_open_app(path: String) -> Result<(), String> {
         std::process::Command::new("cmd")
             .args(["/C", "start", "", &path])
             .spawn()
-            .map_err(|e| format!("Failed to open '{}': {}", path, e))?;
+            .map_err(|e| format!("Failed to open '{path}': {e}"))?;
     }
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
             .arg(&path)
             .spawn()
-            .map_err(|e| format!("Failed to open '{}': {}", path, e))?;
+            .map_err(|e| format!("Failed to open '{path}': {e}"))?;
     }
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
             .arg(&path)
             .spawn()
-            .map_err(|e| format!("Failed to open '{}': {}", path, e))?;
+            .map_err(|e| format!("Failed to open '{path}': {e}"))?;
     }
     Ok(())
 }
@@ -151,14 +178,14 @@ pub fn automation_run_command(cmd: String) -> Result<String, String> {
     let output = std::process::Command::new("cmd")
         .args(["/C", &cmd])
         .output()
-        .map_err(|e| format!("Failed to run command: {}", e))?;
+        .map_err(|e| format!("Failed to run command: {e}"))?;
 
     #[cfg(not(target_os = "windows"))]
     let output = std::process::Command::new("sh")
         .arg("-c")
         .arg(&cmd)
         .output()
-        .map_err(|e| format!("Failed to run command: {}", e))?;
+        .map_err(|e| format!("Failed to run command: {e}"))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -172,29 +199,27 @@ pub fn automation_run_command(cmd: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn automation_get_screen_size() -> Result<(i32, i32), String> {
-    let enigo = Enigo::new();
-    Ok(enigo.main_display())
+    let enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
+    enigo
+        .main_display()
+        .map_err(|e| format!("Failed to get screen size: {e}"))
 }
 
 /// Capture the primary monitor and return a base64-encoded PNG.
-/// This is a standalone command that doesn't need a WebviewWindow parameter,
-/// so it can be called directly from the frontend.
 #[tauri::command]
 pub async fn automation_capture_screen() -> Result<String, String> {
-    let monitors = xcap::Monitor::all()
-        .map_err(|e| format!("Failed to get monitors: {}", e))?;
+    let monitors =
+        xcap::Monitor::all().map_err(|e| format!("Failed to get monitors: {e}"))?;
     let primary = monitors
         .into_iter()
         .find(|m| m.is_primary())
-        .or_else(|| {
-            // Fallback: use first available monitor
-            xcap::Monitor::all().ok().and_then(|mut m| m.pop())
-        })
+        .or_else(|| xcap::Monitor::all().ok().and_then(|mut m| m.pop()))
         .ok_or("No monitor found")?;
 
     let image = primary
         .capture_image()
-        .map_err(|e| format!("Failed to capture: {}", e))?;
+        .map_err(|e| format!("Failed to capture: {e}"))?;
 
     let mut png = Vec::new();
     image::codecs::png::PngEncoder::new(&mut png)
@@ -204,7 +229,7 @@ pub async fn automation_capture_screen() -> Result<String, String> {
             image.height(),
             image::ColorType::Rgba8.into(),
         )
-        .map_err(|e| format!("Failed to encode PNG: {}", e))?;
+        .map_err(|e| format!("Failed to encode PNG: {e}"))?;
 
     Ok(base64::Engine::encode(
         &base64::engine::general_purpose::STANDARD,
@@ -230,67 +255,60 @@ pub async fn automation_execute_steps(
             "mouse_move" => {
                 let x = step.params["x"].as_i64().unwrap_or(0) as i32;
                 let y = step.params["y"].as_i64().unwrap_or(0) as i32;
-                automation_mouse_move(x, y)
-                    .map(|_| format!("Moved to ({}, {})", x, y))
+                automation_mouse_move(x, y).map(|_| format!("Moved to ({x}, {y})"))
             }
             "mouse_click" => {
                 let btn = step.params["button"].as_str().unwrap_or("left").to_string();
-                automation_mouse_click(btn.clone())
-                    .map(|_| format!("Clicked {}", btn))
+                automation_mouse_click(btn.clone()).map(|_| format!("Clicked {btn}"))
             }
             "mouse_double_click" => {
                 let btn = step.params["button"].as_str().unwrap_or("left").to_string();
                 automation_mouse_double_click(btn.clone())
-                    .map(|_| format!("Double-clicked {}", btn))
+                    .map(|_| format!("Double-clicked {btn}"))
             }
             "mouse_down" => {
                 let btn = step.params["button"].as_str().unwrap_or("left").to_string();
-                automation_mouse_down(btn.clone()).map(|_| format!("Mouse down {}", btn))
+                automation_mouse_down(btn.clone()).map(|_| format!("Mouse down {btn}"))
             }
             "mouse_up" => {
                 let btn = step.params["button"].as_str().unwrap_or("left").to_string();
-                automation_mouse_up(btn.clone()).map(|_| format!("Mouse up {}", btn))
+                automation_mouse_up(btn.clone()).map(|_| format!("Mouse up {btn}"))
             }
             "key_press" => {
                 let key = step.params["key"].as_str().unwrap_or("").to_string();
-                automation_key_press(key.clone())
-                    .map(|_| format!("Pressed {}", key))
+                automation_key_press(key.clone()).map(|_| format!("Pressed {key}"))
             }
             "key_combo" => {
                 let keys = step.params["keys"].as_str().unwrap_or("").to_string();
-                automation_key_combo(keys.clone())
-                    .map(|_| format!("Combo {}", keys))
+                automation_key_combo(keys.clone()).map(|_| format!("Combo {keys}"))
             }
             "type_text" => {
-                let text = step.params["text"].as_str().unwrap_or("").to_string();
-                automation_type_text(text.clone())
-                    .map(|_| format!("Typed text"))
+                let _text = step.params["text"].as_str().unwrap_or("").to_string();
+                automation_type_text(_text).map(|_| "Typed text".to_string())
             }
             "scroll" => {
                 let amount = step.params["amount"].as_i64().unwrap_or(0) as i32;
-                automation_scroll(amount)
-                    .map(|_| format!("Scrolled {}", amount))
+                automation_scroll(amount).map(|_| format!("Scrolled {amount}"))
             }
             "wait" => {
                 let ms = step.params["ms"].as_u64().unwrap_or(1000);
-                automation_wait(ms).map(|_| format!("Waited {}ms", ms))
+                automation_wait(ms).map(|_| format!("Waited {ms}ms"))
             }
             "open_app" => {
                 let path = step.params["path"].as_str().unwrap_or("").to_string();
-                automation_open_app(path.clone())
-                    .map(|_| format!("Opened {}", path))
+                automation_open_app(path.clone()).map(|_| format!("Opened {path}"))
             }
             "run_command" => {
                 let cmd = step.params["cmd"].as_str().unwrap_or("").to_string();
-                automation_run_command(cmd).map(|out| format!("{}", out))
+                automation_run_command(cmd).map(|out| out)
             }
             _ => Err(format!("Unknown action: {}", step.action)),
         };
 
         match result {
-            Ok(msg) => results.push(format!("OK {}: {}", desc, msg)),
+            Ok(msg) => results.push(format!("OK {desc}: {msg}")),
             Err(e) => {
-                results.push(format!("ERR {}: {}", desc, e));
+                results.push(format!("ERR {desc}: {e}"));
                 break;
             }
         }
@@ -301,12 +319,12 @@ pub async fn automation_execute_steps(
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-fn parse_button(button: &str) -> Result<MouseButton, String> {
+fn parse_button(button: &str) -> Result<Button, String> {
     match button.to_lowercase().as_str() {
-        "left" => Ok(MouseButton::Left),
-        "right" => Ok(MouseButton::Right),
-        "middle" => Ok(MouseButton::Middle),
-        _ => Err(format!("Unknown button: {}", button)),
+        "left" => Ok(Button::Left),
+        "right" => Ok(Button::Right),
+        "middle" => Ok(Button::Middle),
+        _ => Err(format!("Unknown button: {button}")),
     }
 }
 
@@ -345,12 +363,8 @@ fn map_key(key: &str) -> Result<Key, String> {
         "uparrow" | "up_arrow" | "up" => Ok(Key::UpArrow),
         c if c.len() == 1 => {
             let ch = c.chars().next().unwrap();
-            if ch.is_ascii_alphabetic() {
-                Ok(Key::Layout(ch.to_ascii_lowercase()))
-            } else {
-                Ok(Key::Layout(ch))
-            }
+            Ok(Key::Unicode(ch))
         }
-        _ => Err(format!("Unknown key: {}", key)),
+        _ => Err(format!("Unknown key: {key}")),
     }
 }
