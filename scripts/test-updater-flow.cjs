@@ -82,8 +82,8 @@ function setVersion(version) {
   tauriConf.plugins.updater.dialog = false;
   // Required for Tauri v2 to allow http:// endpoints
   tauriConf.plugins.updater.dangerousInsecureTransportProtocol = true;
-  // Remove pubkey for local test (we have a real key in prod)
-  delete tauriConf.plugins.updater.pubkey;
+  // Keep pubkey — Tauri v2 bundler requires it when createUpdaterArtifacts is true
+  tauriConf.plugins.updater.pubkey = "deskify.key.pub";
   fs.writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2));
 
   // package.json

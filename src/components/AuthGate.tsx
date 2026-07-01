@@ -37,9 +37,7 @@ export const AuthGate = ({ children }: Props) => {
   const [oauthBusy, setOauthBusy] = useState(false);
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
   const [versionError, setVersionError] = useState<boolean>(false);
-  const [loadingUpdate, setLoadingUpdate] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-  const [updateProgress, setUpdateProgress] = useState<number>(0);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -202,47 +200,22 @@ export const AuthGate = ({ children }: Props) => {
               </p>
             </div>
             <div className="flex flex-col items-center gap-3 w-full mt-4">
-{updateProgress > 0 && updateProgress < 100 && (
-  <div className="w-full">
-    <div className="flex justify-between text-xs text-zinc-400 mb-1">
-      <span>Downloading update…</span>
-      <span>{updateProgress}%</span>
-    </div>
-    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-      <div
-        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-        style={{ width: `${updateProgress}%` }}
-      />
-    </div>
-  </div>
-)}
 <Button
   onClick={async () => {
     try {
-      setLoadingUpdate(true);
       setUpdateError(null);
-      setUpdateProgress(0);
-      const result = await applyUpdate((pct) => setUpdateProgress(pct));
+      const result = await applyUpdate();
       if (!result.success) {
-        setUpdateError(result.error || "Update failed. Please try again in a moment.");
+        setUpdateError(result.error || "Failed to open download. Please try again.");
       }
     } catch (e) {
-      console.error("Failed to install update automatically:", e);
-      setUpdateError("Update failed. Please try again in a moment.");
-    } finally {
-      setLoadingUpdate(false);
+      console.error("Failed to open download:", e);
+      setUpdateError("Failed to open download. Please try again.");
     }
   }}
-  disabled={loadingUpdate}
   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white border-0 cursor-pointer rounded-full h-11 font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/20"
 >
-  {loadingUpdate ? (
-    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-    </svg>
-  ) : null}
-  {loadingUpdate ? "Installing…" : updateVersion ? `Update to v${updateVersion}` : "Update Now"}
+  {updateVersion ? `Download v${updateVersion}` : "Download Now"}
 </Button>
 {updateError && (
   <div className="w-full space-y-3">

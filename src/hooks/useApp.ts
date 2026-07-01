@@ -1,58 +1,32 @@
 import { useEffect, useState } from "react";
 import { useTitles } from "@/hooks";
-import { check } from "@tauri-apps/plugin-updater";
 import { listen } from "@tauri-apps/api/event";
 import { safeLocalStorage, migrateLocalStorageToSQLite } from "@/lib";
 import { getShortcutsConfig } from "@/lib/storage";
 import { invoke } from "@tauri-apps/api/core";
-import { relaunch } from "@tauri-apps/plugin-process";
-import { getVersion } from "@tauri-apps/api/app";
-import { compareSemver, detectPlatformKey } from "@/components/updater";
+import { detectPlatformKey } from "@/components/updater";
 
 export const useApp = () => {
   const [isHidden, setIsHidden] = useState(false);
   useTitles();
 
-  const [updateAvailable, setUpdateAvailable] = useState<any>(null);
+  const [updateAvailable, setUpdateAvailable] = useState<{
+    version: string;
+    downloadUrl: string;
+  } | null>(null);
 
-  /** Manual update check (called from DevOptions settings panel). */
-  const checkForUpdate = async () => {
-    try {
-      const update = await check();
-      setUpdateAvailable(update ?? null);
-      return update ?? null;
-    } catch (e) {
-      console.error("Update check failed:", e);
-      setUpdateAvailable(null);
-      throw e;
-    }
-  };
-
-  // Listen for updates discovered by the silent background updater (any window)
+  // Listen for updates discovered by the silent background updater
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     const setupListener = async () => {
       try {
-        unlisten = await listen<any>("deskify://update-available", async (event) => {
-          const payload = event.payload;
-          console.log("[Updater] Update event received:", payload?.version);
-
-          // Try the plugin's check() to get the full update object (with downloadAndInstall)
-          try {
-            const found = await check();
-            if (found) {
-              setUpdateAvailable(found);
-              return;
-            }
-          } catch {
-            // check() failed (e.g. signature error) — fall through to use payload version
+        unlisten = await listen<{ version: string; downloadUrl: string }>(
+          "deskify://update-available",
+          (event) => {
+            console.log("[Updater] Update event received:", event.payload?.version);
+            setUpdateAvailable(event.payload);
           }
-
-          // Use the version from the event payload
-          if (payload?.version) {
-            setUpdateAvailable({ version: payload.version, _customFallback: true });
-          }
-        });
+        );
       } catch (err) {
         console.error("Failed to setup update listener:", err);
       }
@@ -69,88 +43,22 @@ export const useApp = () => {
     };
   }, []);
 
-  /** Custom fallback: fetch latest.json + download via Rust, bypassing the updater plugin. */
-  const applyCustomUpdateFallback = async (
-    onProgress?: (pct: number) => void
-  ): Promise<{ success: boolean; error?: string }> => {
+  /** Open the download URL in the default browser. */
+  const applyUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      onProgress?.(5);
-      const res = await fetch(
-        "https://github.com/1nird/Deskify/releases/latest/download/latest.json"
-      );
-      if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
-
-      const json = await res.json();
-      const latestVersion = json?.version;
-      if (!latestVersion) return { success: false, error: "latest.json missing version" };
-
-      const currentVersion = await getVersion();
-      if (compareSemver(latestVersion, currentVersion) <= 0) {
-        return { success: false, error: "Already on the latest version" };
+      if (updateAvailable?.downloadUrl) {
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl(updateAvailable.downloadUrl);
+        console.log("[Updater] Opened download URL in browser");
+        return { success: true };
       }
-
-      let platformKey = detectPlatformKey();
-      let entry = platformKey ? json.platforms?.[platformKey] : null;
-
-      if (!entry && platformKey === "darwin-aarch64") {
-        platformKey = "darwin-x86_64";
-        entry = json.platforms?.[platformKey];
-      }
-
-      if (!entry?.url) {
-        return { success: false, error: `No download for ${platformKey}` };
-      }
-
-      onProgress?.(10);
-
-      console.log(`[Updater] Downloading v${latestVersion} from ${entry.url}`);
-      await invoke("download_and_run_installer", { url: entry.url });
-
-      onProgress?.(90);
-      console.log("[Updater] Installer launched successfully");
+      // Fallback: open the downloads page
+      await openDownloadPage();
       return { success: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error("[Updater] Custom update failed:", msg);
-      return { success: false, error: msg || "Update failed" };
-    }
-  };
-
-  /** Apply the update: download and install, then relaunch. */
-  const applyUpdate = async (
-    onProgress?: (pct: number) => void
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const update = await check();
-      if (!update) return await applyCustomUpdateFallback(onProgress);
-
-      console.log(`[Updater] Downloading update ${update.version}...`);
-      await update.downloadAndInstall((event) => {
-        if (event.event === "Progress") {
-          const downloaded = (event.data as any)?.downloaded ?? 0;
-          const total = (event.data as any)?.total;
-          if (total && total > 0) {
-            onProgress?.(Math.min(99, Math.round((downloaded / total) * 100)));
-          }
-        } else if (event.event === "Finished") {
-          onProgress?.(100);
-        }
-      });
-
-      console.log("[Updater] Install complete, relaunching...");
-      await relaunch();
-      return { success: true };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error("[Updater] Update failed:", msg);
-
-      // Fallback on signature errors
-      if (msg.includes("Invalid symbol") || msg.includes("signature")) {
-        console.log("[Updater] Signature error — trying custom fallback...");
-        return await applyCustomUpdateFallback(onProgress);
-      }
-
-      return { success: false, error: msg || "Update failed" };
+      console.error("[Updater] Failed to open download:", msg);
+      return { success: false, error: msg || "Failed to open download" };
     }
   };
 
@@ -161,6 +69,31 @@ export const useApp = () => {
       await openUrl("https://deskify.site/download");
     } catch (e) {
       console.error("[Updater] Failed to open download page:", e);
+    }
+  };
+
+  // Manual update check (used from DevOptions settings panel)
+  const checkForUpdate = async () => {
+    try {
+      const res = await fetch(
+        "https://github.com/1nird/Deskify/releases/latest/download/latest.json"
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json?.version) {
+        let platformKey = detectPlatformKey();
+        let entry = platformKey ? json.platforms?.[platformKey] : null;
+        if (!entry && platformKey === "darwin-aarch64") {
+          entry = json.platforms?.["darwin-x86_64"];
+        }
+        const downloadUrl: string = entry?.url ?? "";
+        setUpdateAvailable({ version: json.version, downloadUrl });
+        return { version: json.version, downloadUrl };
+      }
+      return null;
+    } catch (e) {
+      console.error("[Updater] Manual check failed:", e);
+      throw e;
     }
   };
 
