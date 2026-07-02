@@ -1,8 +1,20 @@
 use enigo::*;
 use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
+
+static STOP_FLAG: AtomicBool = AtomicBool::new(false);
+
+#[tauri::command]
+pub fn automation_stop() {
+    STOP_FLAG.store(true, Ordering::SeqCst);
+}
+
+fn is_stopped() -> bool {
+    STOP_FLAG.swap(false, Ordering::SeqCst)
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AutomationStep {
@@ -226,10 +238,18 @@ pub async fn automation_capture_screen() -> Result<String, String> {
 #[tauri::command]
 pub async fn automation_execute_steps(
     steps: Vec<AutomationStep>,
+    speed: Option<f64>,
 ) -> Result<Vec<String>, String> {
+    let speed_multiplier = speed.unwrap_or(1.0).clamp(0.1, 10.0);
     let mut results: Vec<String> = Vec::new();
 
     for (i, step) in steps.iter().enumerate() {
+        // Check stop flag
+        if is_stopped() {
+            results.push("⏹ Stopped by user".to_string());
+            break;
+        }
+
         let desc = step
             .description
             .clone()
@@ -276,7 +296,41 @@ pub async fn automation_execute_steps(
             }
             "wait" => {
                 let ms = step.params["ms"].as_u64().unwrap_or(1000);
-                automation_wait(ms).map(|_| format!("Waited {ms}ms"))
+                let adjusted = (ms as f64 / speed_multiplier) as u64;
+                // Check stop flag during wait in small increments
+                let chunks = adjusted / 100;
+                for _ in 0..chunks {
+                    if is_stopped() {
+                        return Ok({
+                            results.push("⏹ Stopped by user".to_string());
+                            results
+                        });
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+                let rem = adjusted % 100;
+                if rem > 0 {
+                    thread::sleep(Duration::from_millis(rem));
+                }
+                Ok(format!("Waited {ms}ms (at {speed_multiplier}x)"))
+            }
+            "wait_raw" => {
+                let ms = step.params["ms"].as_u64().unwrap_or(1000);
+                let chunks = ms / 100;
+                for _ in 0..chunks {
+                    if is_stopped() {
+                        return Ok({
+                            results.push("⏹ Stopped by user".to_string());
+                            results
+                        });
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+                let rem = ms % 100;
+                if rem > 0 {
+                    thread::sleep(Duration::from_millis(rem));
+                }
+                Ok(format!("Waited {ms}ms"))
             }
             "open_app" => {
                 let path = step.params["path"].as_str().unwrap_or("").to_string();

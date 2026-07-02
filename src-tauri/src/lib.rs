@@ -422,6 +422,7 @@ pub fn run() {
             automation::automation_get_screen_size,
             automation::automation_capture_screen,
             automation::automation_execute_steps,
+            automation::automation_stop,
             window::set_content_protected,
             window::set_ignore_cursor_events,
         ])

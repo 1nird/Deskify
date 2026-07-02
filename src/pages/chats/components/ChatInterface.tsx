@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, Send, Loader2, Plus, MessageSquare, Trash2, User, PanelLeftClose, PanelLeftOpen, Lock, Sparkles, Paperclip, ExternalLink, X } from "lucide-react";
+import { ChevronDown, Send, Loader2, Plus, MessageSquare, Trash2, User, PanelLeftClose, PanelLeftOpen, Lock, Paperclip, ExternalLink, X } from "lucide-react";
 import { safeLocalStorage, getActiveSystemPrompt } from "@/lib";
 import { fetchAIResponse } from "@/lib/functions/ai-response.function";
 import { saveConversation } from "@/lib";
@@ -562,25 +562,19 @@ Answer naturally, be helpful, and pay close attention to the chat history.`;
       {/* ── Main chat area ── */}
       <div className="flex flex-col flex-1 min-w-0 h-full">
 
-        {/* Top bar */}
-        <div className="shrink-0 flex items-center gap-2 px-4 h-12 border-b border-white/8 bg-[#0a0f14]/40 backdrop-blur-sm">
-          <button
-            onClick={() => setSidebarCollapsed(v => !v)}
-            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-            className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/8 transition-all duration-200"
-          >
-            {sidebarCollapsed
-              ? <PanelLeftOpen className="size-4" />
-              : <PanelLeftClose className="size-4" />}
-          </button>
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="size-3.5 text-emerald-400" />
-            <span className="text-sm font-semibold text-white/80">Deskify Chat</span>
-          </div>
-        </div>
+
 
         {/* ── Chat tabs (multi‑chat) ── */}
-      <div className="flex gap-2 overflow-x-auto border-b border-white/8 bg-[#0a0f14]/70 backdrop-blur-xl px-2 py-1">
+      <div className="flex gap-2 overflow-x-auto border-b border-white/8 bg-[#0a0f14]/70 backdrop-blur-xl px-2 py-1 items-center">
+        <button
+            onClick={() => setSidebarCollapsed(v => !v)}
+            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+            className="size-6 rounded-lg flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/8 shrink-0 transition-all duration-200"
+          >
+            {sidebarCollapsed
+              ? <PanelLeftOpen className="size-3.5" />
+              : <PanelLeftClose className="size-3.5" />}
+          </button>
         {sessions.map(session => {
           const isActive = session.id === activeChatId;
           return (

@@ -52,4 +52,44 @@ export const DEFAULT_SHORTCUT_ACTIONS: ShortcutAction[] = [
       linux: "ctrl+g",
     },
   },
+  {
+    id: "automation_capture",
+    name: "Capture for Automation",
+    description: "Capture screenshot for automation",
+    defaultKey: {
+      macos: "cmd+shift+a",
+      windows: "ctrl+shift+a",
+      linux: "ctrl+shift+a",
+    },
+  },
+  {
+    id: "automation_run",
+    name: "Run Automation",
+    description: "Run the current automation",
+    defaultKey: {
+      macos: "cmd+shift+r",
+      windows: "ctrl+shift+r",
+      linux: "ctrl+shift+r",
+    },
+  },
+  {
+    id: "automation_stop",
+    name: "Stop Automation",
+    description: "Stop the running automation",
+    defaultKey: {
+      macos: "cmd+shift+x",
+      windows: "ctrl+shift+x",
+      linux: "ctrl+shift+x",
+    },
+  },
+  {
+    id: "automation_record",
+    name: "Record Automation",
+    description: "Start/stop recording mouse and keyboard actions",
+    defaultKey: {
+      macos: "cmd+shift+u",
+      windows: "ctrl+shift+u",
+      linux: "ctrl+shift+u",
+    },
+  },
 ];
