@@ -18,8 +18,7 @@ pub struct AutomationStep {
 pub fn automation_mouse_move(x: i32, y: i32) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
-    enigo
-        .mouse_move_to(x, y)
+    Mouse::move_mouse(&mut enigo, x, y, Coordinate::Abs)
         .map_err(|e| format!("Failed to move mouse: {e}"))
 }
 
@@ -28,8 +27,7 @@ pub fn automation_mouse_click(button: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo
-        .mouse_click(btn)
+    Mouse::button(&mut enigo, btn, Direction::Click)
         .map_err(|e| format!("Failed to click: {e}"))
 }
 
@@ -38,12 +36,10 @@ pub fn automation_mouse_double_click(button: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo
-        .mouse_click(btn)
+    Mouse::button(&mut enigo, btn, Direction::Click)
         .map_err(|e| format!("Failed first click: {e}"))?;
     thread::sleep(Duration::from_millis(80));
-    enigo
-        .mouse_click(btn)
+    Mouse::button(&mut enigo, btn, Direction::Click)
         .map_err(|e| format!("Failed second click: {e}"))
 }
 
@@ -52,8 +48,7 @@ pub fn automation_mouse_down(button: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo
-        .mouse_down(btn)
+    Mouse::button(&mut enigo, btn, Direction::Press)
         .map_err(|e| format!("Failed mouse down: {e}"))
 }
 
@@ -62,8 +57,7 @@ pub fn automation_mouse_up(button: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let btn = parse_button(&button)?;
-    enigo
-        .mouse_up(btn)
+    Mouse::button(&mut enigo, btn, Direction::Release)
         .map_err(|e| format!("Failed mouse up: {e}"))
 }
 
@@ -74,8 +68,7 @@ pub fn automation_key_press(key: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
     let k = map_key(&key)?;
-    enigo
-        .key_click(k)
+    Keyboard::key(&mut enigo, k, Direction::Click)
         .map_err(|e| format!("Failed to press key '{key}': {e}"))
 }
 
@@ -90,21 +83,18 @@ pub fn automation_key_combo(keys: String) -> Result<(), String> {
 
     // Hold modifiers
     for part in &parts[..parts.len().saturating_sub(1)] {
-        enigo
-            .key_down(map_key(part)?)
+        Keyboard::key(&mut enigo, map_key(part)?, Direction::Press)
             .map_err(|e| format!("Failed to hold '{part}': {e}"))?;
     }
 
     // Press and release the final key
     let last = parts.last().unwrap();
-    enigo
-        .key_click(map_key(last)?)
+    Keyboard::key(&mut enigo, map_key(last)?, Direction::Click)
         .map_err(|e| format!("Failed to press '{last}': {e}"))?;
 
     // Release modifiers in reverse
     for part in parts[..parts.len().saturating_sub(1)].iter().rev() {
-        enigo
-            .key_up(map_key(part)?)
+        Keyboard::key(&mut enigo, map_key(part)?, Direction::Release)
             .map_err(|e| format!("Failed to release '{part}': {e}"))?;
     }
 
@@ -115,8 +105,7 @@ pub fn automation_key_combo(keys: String) -> Result<(), String> {
 pub fn automation_type_text(text: String) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
-    enigo
-        .text(&text)
+    Keyboard::text(&mut enigo, &text)
         .map_err(|e| format!("Failed to type text: {e}"))
 }
 
@@ -126,17 +115,14 @@ pub fn automation_type_text(text: String) -> Result<(), String> {
 pub fn automation_get_mouse_position() -> Result<(i32, i32), String> {
     let enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
-    enigo
-        .mouse_location()
-        .map_err(|e| format!("Failed to get mouse position: {e}"))
+    Mouse::location(&enigo).map_err(|e| format!("Failed to get mouse position: {e}"))
 }
 
 #[tauri::command]
 pub fn automation_scroll(amount: i32) -> Result<(), String> {
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
-    enigo
-        .scroll(amount, Axis::Vertical)
+    Mouse::scroll(&mut enigo, amount, Axis::Vertical)
         .map_err(|e| format!("Failed to scroll: {e}"))
 }
 
@@ -201,9 +187,7 @@ pub fn automation_run_command(cmd: String) -> Result<String, String> {
 pub fn automation_get_screen_size() -> Result<(i32, i32), String> {
     let enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to init enigo: {e}"))?;
-    enigo
-        .main_display()
-        .map_err(|e| format!("Failed to get screen size: {e}"))
+    Mouse::main_display(&enigo).map_err(|e| format!("Failed to get screen size: {e}"))
 }
 
 /// Capture the primary monitor and return a base64-encoded PNG.
