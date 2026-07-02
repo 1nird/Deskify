@@ -6,14 +6,35 @@ use std::thread;
 use std::time::Duration;
 
 static STOP_FLAG: AtomicBool = AtomicBool::new(false);
+static PAUSE_FLAG: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub fn automation_stop() {
     STOP_FLAG.store(true, Ordering::SeqCst);
+    PAUSE_FLAG.store(false, Ordering::SeqCst);
+}
+
+#[tauri::command]
+pub fn automation_pause() {
+    PAUSE_FLAG.store(true, Ordering::SeqCst);
+}
+
+#[tauri::command]
+pub fn automation_resume() {
+    PAUSE_FLAG.store(false, Ordering::SeqCst);
 }
 
 fn is_stopped() -> bool {
     STOP_FLAG.swap(false, Ordering::SeqCst)
+}
+
+fn check_pause() {
+    while PAUSE_FLAG.load(Ordering::SeqCst) {
+        if STOP_FLAG.load(Ordering::SeqCst) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -244,6 +265,8 @@ pub async fn automation_execute_steps(
     let mut results: Vec<String> = Vec::new();
 
     for (i, step) in steps.iter().enumerate() {
+        // Check pause (blocks until resumed or stopped)
+        check_pause();
         // Check stop flag
         if is_stopped() {
             results.push("⏹ Stopped by user".to_string());
@@ -297,9 +320,10 @@ pub async fn automation_execute_steps(
             "wait" => {
                 let ms = step.params["ms"].as_u64().unwrap_or(1000);
                 let adjusted = (ms as f64 / speed_multiplier) as u64;
-                // Check stop flag during wait in small increments
+                // Check stop/pause flag during wait in small increments
                 let chunks = adjusted / 100;
                 for _ in 0..chunks {
+                    check_pause();
                     if is_stopped() {
                         return Ok({
                             results.push("⏹ Stopped by user".to_string());
@@ -318,6 +342,7 @@ pub async fn automation_execute_steps(
                 let ms = step.params["ms"].as_u64().unwrap_or(1000);
                 let chunks = ms / 100;
                 for _ in 0..chunks {
+                    check_pause();
                     if is_stopped() {
                         return Ok({
                             results.push("⏹ Stopped by user".to_string());

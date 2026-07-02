@@ -423,6 +423,8 @@ pub fn run() {
             automation::automation_capture_screen,
             automation::automation_execute_steps,
             automation::automation_stop,
+            automation::automation_pause,
+            automation::automation_resume,
             window::set_content_protected,
             window::set_ignore_cursor_events,
         ])
