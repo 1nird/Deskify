@@ -1,9 +1,11 @@
 use enigo::*;
 use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
+use tauri::{Emitter, Manager, WebviewWindowBuilder};
 
 static STOP_FLAG: AtomicBool = AtomicBool::new(false);
 static PAUSE_FLAG: AtomicBool = AtomicBool::new(false);
@@ -252,6 +254,123 @@ pub async fn automation_capture_screen() -> Result<String, String> {
         &base64::engine::general_purpose::STANDARD,
         &png,
     ))
+}
+
+// ─── Coordinate Picker ────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn automation_show_picker(app: tauri::AppHandle) -> Result<(), String> {
+    // 1. Hide the dashboard so the user sees their actual desktop/windows behind it
+    if let Some(dashboard) = app.get_webview_window("dashboard") {
+        let _ = dashboard.hide();
+    }
+    // Brief pause to let the dashboard finish hiding
+    thread::sleep(Duration::from_millis(200));
+
+    // 2. Capture the screen (now showing the user's desktop/apps)
+    let monitors = xcap::Monitor::all().map_err(|e| format!("Failed to get monitors: {e}"))?;
+    let primary = monitors
+        .into_iter()
+        .find(|m| m.is_primary())
+        .or_else(|| xcap::Monitor::all().ok().and_then(|mut m| m.pop()))
+        .ok_or("No monitor found")?;
+
+    let screen_w = primary.width() as f64;
+    let screen_h = primary.height() as f64;
+    let screen_x = primary.x() as f64;
+    let screen_y = primary.y() as f64;
+
+    let image = primary.capture_image().map_err(|e| format!("Failed to capture: {e}"))?;
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(
+            image.as_raw(),
+            image.width(),
+            image.height(),
+            image::ColorType::Rgba8.into(),
+        )
+        .map_err(|e| format!("Failed to encode PNG: {e}"))?;
+    let base64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &png);
+
+    // 3. Write self-contained picker HTML to a temp file
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{width:100%;height:100%;overflow:hidden;background:#000;cursor:crosshair;font-family:system-ui,sans-serif}}
+#bg{{position:fixed;top:0;left:0;width:100vw;height:100vh;background:url(data:image/png;base64,{b64}) center/contain no-repeat;opacity:0.8;pointer-events:none}}
+#banner{{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.95);color:#a78bfa;padding:8px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;z-index:10;border:1px solid rgba(167,139,250,0.3)}}
+#coords{{position:fixed;background:rgba(15,23,42,0.92);color:#34d399;padding:4px 10px;border-radius:6px;font-family:monospace;font-size:12px;pointer-events:none;z-index:10;border:1px solid rgba(52,211,153,0.3);white-space:nowrap;display:none}}
+</style></head><body>
+<div id="bg"></div>
+<div id="banner">&#127919; Click to pick &mdash; <span style="color:#f87171">Esc</span> cancel</div>
+<div id="coords"></div>
+<script>
+var SW={sw},SH={sh},cd=document.getElementById('coords');
+document.addEventListener('mousemove',function(e){{var px=Math.round(e.clientX*SW/window.innerWidth),py=Math.round(e.clientY*SH/window.innerHeight);cd.style.display='block';cd.style.left=(e.clientX+18)+'px';cd.style.top=(e.clientY+18)+'px';cd.textContent=px+', '+py}});
+document.addEventListener('click',function(e){{var px=Math.round(e.clientX*SW/window.innerWidth),py=Math.round(e.clientY*SH/window.innerHeight);window.__TAURI__.event.emit('picker-coords',{{x:px,y:py}})}});
+document.addEventListener('keydown',function(e){{if(e.key==='Escape')window.__TAURI__.event.emit('picker-coords',{{cancelled:true}})}});
+</script></body></html>"#,
+        sw = screen_w,
+        sh = screen_h,
+        b64 = base64
+    );
+
+    let picker_path = std::env::temp_dir().join("deskify_picker.html");
+    {
+        let mut f = std::fs::File::create(&picker_path)
+            .map_err(|e| format!("Failed to create picker file: {e}"))?;
+        f.write_all(html.as_bytes())
+            .map_err(|e| format!("Failed to write picker HTML: {e}"))?;
+    }
+    let picker_url = format!("file:///{}", picker_path.to_string_lossy().replace('\\', "/"));
+
+    // 4. Clean up any old picker window
+    let label = "coordinate-picker";
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.destroy();
+    }
+
+    // 5. Create fullscreen picker window
+    let picker = WebviewWindowBuilder::new(
+        &app,
+        label,
+        tauri::WebviewUrl::External(picker_url.parse().map_err(|e| format!("Bad URL: {e}"))?)
+    )
+        .title("Pick Coordinates")
+        .inner_size(screen_w, screen_h)
+        .position(screen_x, screen_y)
+        .always_on_top(true)
+        .decorations(false)
+        .skip_taskbar(true)
+        .resizable(false)
+        .closable(false)
+        .minimizable(false)
+        .maximizable(false)
+        .focused(true)
+        .accept_first_mouse(true)
+        .build()
+        .map_err(|e| format!("Failed to create picker window: {e}"))?;
+
+    picker.show().map_err(|e| format!("Failed to show picker: {e}"))?;
+    picker.set_focus().map_err(|e| format!("Failed to focus picker: {e}"))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn automation_close_picker(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(picker) = app.get_webview_window("coordinate-picker") {
+        let _ = picker.destroy();
+    }
+    // Clean up temp file
+    let _ = std::fs::remove_file(std::env::temp_dir().join("deskify_picker.html"));
+    // Show dashboard again
+    if let Some(dashboard) = app.get_webview_window("dashboard") {
+        let _ = dashboard.show();
+        let _ = dashboard.set_focus();
+    }
+    Ok(())
 }
 
 // ─── Execute sequence ──────────────────────────────────────────────────────

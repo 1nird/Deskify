@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { cn } from "@/lib/utils";
 import { fetchAIResponse } from "@/lib/functions/ai-response.function";
 import {
@@ -346,6 +347,10 @@ export const Automation = () => {
   const handleStopRef = useRef<() => Promise<void>>(async () => {});
   const handleToggleRecordRef = useRef<() => void>(() => {});
   const handleScreenshotCaptureRef = useRef<() => Promise<void>>(async () => {});
+  // Debounce screenshot capture to prevent double-invoke from shortcut
+  const lastScreenshotTime = useRef(0);
+  // Track if picker is active to prevent re-entry
+  const pickerActiveRef = useRef(false);
 
   // ── Load scripts ──────────────────────────────────────────────────────────
 
@@ -645,7 +650,15 @@ export const Automation = () => {
 
   // ── Screenshot ──────────────────────────────────────────────────────────
 
-  const handleScreenshotCapture = async () => {
+  const handleScreenshotCapture = useCallback(async () => {
+    // Debounce: ignore calls within 500ms of each other
+    const now = Date.now();
+    if (now - lastScreenshotTime.current < 500) {
+      console.log("Screenshot debounced (double-fire prevention)");
+      return;
+    }
+    lastScreenshotTime.current = now;
+
     try {
       const base64 = await invoke<string>("automation_capture_screen");
       setScreenshots((prev) => [...prev, `data:image/png;base64,${base64}`]);
@@ -653,7 +666,7 @@ export const Automation = () => {
     } catch (e) {
       console.error("Screenshot capture failed:", e);
     }
-  };
+  }, []);
 
   handleScreenshotCaptureRef.current = handleScreenshotCapture;
 
@@ -678,64 +691,46 @@ export const Automation = () => {
     setScreenshots((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // ── Coordinate picker ──────────────────────────────────────────────────
+  // ── Coordinate picker (real screen via native Tauri window) ────────────
+
+  // Listen for picker-coords events from the native picker window
+  useEffect(() => {
+    const unlisten = listen<{ x?: number; y?: number; cancelled?: boolean }>("picker-coords", (event) => {
+      // Close picker and show dashboard
+      invoke("automation_close_picker").catch(console.error);
+      pickerActiveRef.current = false;
+      setPickerActive(false);
+
+      if (event.payload.cancelled) return;
+      if (event.payload.x == null || event.payload.y == null) return;
+
+      const sx = Math.round(event.payload.x);
+      const sy = Math.round(event.payload.y);
+      if (isNaN(sx) || isNaN(sy) || !isFinite(sx) || !isFinite(sy)) return;
+
+      setSteps((prev) => [...prev, {
+        action: "mouse_move",
+        params: { x: sx, y: sy },
+        description: `Move to (${sx}, ${sy})`,
+      }]);
+      setSaved(false);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
 
   const handleStartPicker = async () => {
-    if (pickerActive) return;
+    if (pickerActive || pickerActiveRef.current) return;
+    pickerActiveRef.current = true;
     setPickerActive(true);
 
     try {
-      // Get screen size for coordinate scaling
-      const [screenW, screenH] = await invoke<[number, number]>("automation_get_screen_size");
-      const base64 = await invoke<string>("automation_capture_screen");
-      const img = new Image();
-      img.src = `data:image/png;base64,${base64}`;
-      await new Promise((resolve) => { img.onload = resolve; });
-
-      const overlay = document.createElement("div");
-      overlay.id = "picker-overlay";
-      overlay.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;cursor:crosshair;background:rgba(0,0,0,0.3);";
-      overlay.innerHTML = `
-        <img src="${img.src}" style="width:100%;height:100%;object-fit:contain;opacity:0.7;pointer-events:none;" />
-        <div style="position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#0f172a;color:#a78bfa;padding:6px 16px;border-radius:12px;font-size:12px;font-weight:600;border:1px solid rgba(167,139,250,0.3);z-index:100000;">
-          <span style="margin-right:8px;">🎯</span>Click on the screen to pick coordinates<span style="margin-left:8px;opacity:0.5;">Esc to cancel</span>
-        </div>
-      `;
-
-      const handleClick = (ev: MouseEvent) => {
-        ev.stopPropagation();
-        ev.preventDefault();
-        cleanup();
-        // Scale viewport coordinates to screen coordinates
-        const scaleX = screenW / overlay.clientWidth;
-        const scaleY = screenH / overlay.clientHeight;
-        const screenX = Math.round(ev.clientX * scaleX);
-        const screenY = Math.round(ev.clientY * scaleY);
-        setSteps((prev) => [...prev, {
-          action: "mouse_move",
-          params: { x: screenX, y: screenY },
-          description: `Move to (${screenX}, ${screenY})`,
-        }]);
-        setSaved(false);
-      };
-
-      const handleKey = (ev: KeyboardEvent) => {
-        if (ev.key === "Escape") cleanup();
-      };
-
-      const cleanup = () => {
-        overlay.removeEventListener("click", handleClick);
-        document.removeEventListener("keydown", handleKey);
-        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        setPickerActive(false);
-      };
-
-      overlay.addEventListener("click", handleClick);
-      document.addEventListener("keydown", handleKey);
-      document.body.appendChild(overlay);
+      await invoke("automation_show_picker");
     } catch (e) {
-      console.error("Picker error:", e);
+      console.error("Picker failed:", e);
+      pickerActiveRef.current = false;
       setPickerActive(false);
+      // Restore dashboard on error
+      invoke("automation_close_picker").catch(() => {});
     }
   };
 
@@ -750,84 +745,55 @@ export const Automation = () => {
     setAiLoading(true);
     setAiError("");
 
+    // Timeout: abort after 20s (AI should be fast with Gemini Flash)
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
     try {
       // Strip data URL prefix from screenshots
       const cleanImages = screenshots.map((s) => s.includes(",") ? s.split(",")[1] : s);
 
-      const systemPrompt = `You are a precise automation script generator for a desktop macro tool.
-Generate ONLY a JSON array of steps. No markdown, no explanation. Just the array.
+      const systemPrompt = `You are a desktop automation script generator. Output ONLY a JSON array of steps. No markdown.
 
-Available actions and their params:
-- mouse_move: {"x": number, "y": number} — move to screen coords
-- mouse_click: {"button": "left"|"right"|"middle"} — click
-- mouse_double_click: {"button": "left"|"right"|"middle"} — double-click
-- mouse_down: {"button": "left"|"right"|"middle"} — press button
-- mouse_up: {"button": "left"|"right"|"middle"} — release button
-- key_press: {"key": string} — single key (enter, escape, tab, a, A, etc)
-- key_combo: {"keys": string} — combo like "ctrl,c" or "alt,tab"
-- type_text: {"text": string} — type text
-- scroll: {"amount": number} — positive=up, negative=down
-- wait: {"ms": number} — wait ms (1000 = 1s)
-- open_app: {"path": string} — app path (chrome.exe, notepad.exe, etc)
-- run_command: {"cmd": string} — shell command
+Actions: mouse_move (x,y), mouse_click (button:left|right|middle), mouse_double_click (button), mouse_down (button), mouse_up (button), key_press (key), key_combo (keys), type_text (text), scroll (amount), wait (ms), open_app (path), run_command (cmd)
 
-RULES:
-1. Every step MUST have a "description" field.
-2. Add realistic wait steps between actions so the system can respond.
-3. Analyze any screenshots provided and generate steps to interact with visible UI.
-4. For clicking buttons/links on screen: estimate the pixel coordinates carefully.
+RULES: Every step needs "action", "params", "description". Add waits between steps. Analyze any screenshots.
 
-Example output:
-[{"action":"open_app","params":{"path":"notepad.exe"},"description":"Open Notepad"},{"action":"wait","params":{"ms":1000},"description":"Wait for app"},{"action":"type_text","params":{"text":"Hello!"},"description":"Type greeting"}]`;
-
-      // Set up timeout that actually aborts the request
-      const TIMEOUT_MS = 30000;
-      let timedOut = false;
-      const timeoutId = setTimeout(() => {
-        timedOut = true;
-        controller.abort();
-      }, TIMEOUT_MS);
+Example: [{"action":"open_app","params":{"path":"notepad.exe"},"description":"Open Notepad"},{"action":"wait","params":{"ms":1000},"description":"Wait"},{"action":"type_text","params":{"text":"Hello"},"description":"Type greeting"}]`;
 
       let fullResponse = "";
       try {
         for await (const chunk of fetchAIResponse({
           systemPrompt,
           userMessage: aiPrompt,
-          imagesBase64: cleanImages,
+          imagesBase64: cleanImages.length > 0 ? cleanImages : undefined,
           signal: controller.signal,
         })) {
           if (controller.signal.aborted) return;
           fullResponse += chunk;
         }
       } catch (streamErr: any) {
-        if (timedOut || streamErr?.name === "AbortError") {
-          setAiError("AI generation timed out after 30s. The API may be unreachable. Check your network and API key.");
-          setAiLoading(false);
-          clearTimeout(timeoutId);
+        if (streamErr?.name === "AbortError" || controller.signal.aborted) {
+          setAiError("AI request timed out. Check your internet connection and try again.");
           return;
         }
         throw streamErr;
-      } finally {
-        clearTimeout(timeoutId);
       }
 
-      if (controller.signal.aborted || timedOut) return;
+      if (controller.signal.aborted) return;
 
-      // Check if response looks like an error message
-      if (fullResponse.startsWith("AI Error:") || fullResponse.startsWith("I'm having trouble") || fullResponse.startsWith("Please check your")) {
+      // Check for error messages from the AI service
+      if (fullResponse.startsWith("AI Error:") || fullResponse.includes("trouble connecting") || fullResponse.includes("Please check")) {
         setAiError(fullResponse);
-        setAiLoading(false);
         return;
       }
 
       if (!fullResponse.trim()) {
-        setAiError("AI returned an empty response. Please try again.");
-        setAiLoading(false);
+        setAiError("AI returned empty response. Try again with a more specific description.");
         return;
       }
 
-      // Try to extract JSON
-      const jsonMatch = fullResponse.match(/\[[\s\S]*\]/);
+      // Try to extract and parse JSON array
+      const jsonMatch = fullResponse.match(/\[[\s\S]*?\]/);
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -842,20 +808,20 @@ Example output:
             setAiPrompt("");
             setAiError("");
           } else {
-            setAiError("AI returned an empty steps array. Try being more specific.");
+            setAiError("AI didn't generate any steps. Try being more specific about the automation.");
           }
-        } catch (parseErr) {
-          setAiError("AI returned invalid JSON. Please try again.");
-          console.error("JSON parse error:", parseErr, "Raw:", fullResponse.substring(0, 200));
+        } catch {
+          setAiError("AI response wasn't valid JSON. Try rephrasing your description.");
         }
       } else {
-        setAiError("AI didn't generate valid steps. Try being more specific about what you want to automate.");
+        setAiError("AI didn't return step data. Describe what you want the macro to do in more detail.");
       }
     } catch (e: any) {
-      if (e?.name === "AbortError") return;
+      if (e?.name === "AbortError" || controller.signal.aborted) return;
       console.error("AI generation failed:", e);
-      setAiError(`Failed: ${e?.message || "Unknown error"}. Check your API key in Settings.`);
+      setAiError(`Connection failed: ${e?.message || "Unknown error"}. Make sure your API key is set in Settings.`);
     } finally {
+      clearTimeout(timeoutId);
       setAiLoading(false);
       aiAbortRef.current = null;
     }

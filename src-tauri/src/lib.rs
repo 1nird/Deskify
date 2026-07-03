@@ -425,6 +425,8 @@ pub fn run() {
             automation::automation_stop,
             automation::automation_pause,
             automation::automation_resume,
+            automation::automation_show_picker,
+            automation::automation_close_picker,
             window::set_content_protected,
             window::set_ignore_cursor_events,
         ])

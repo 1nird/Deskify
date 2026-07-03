@@ -120,26 +120,56 @@ function resolveApiKeysAndModel(params: ManagedRequestParams): {
   return { apiKeys, model };
 }
 
+/**
+ * Try a fetch request using native window.fetch first (handles SSE better),
+ * falling back to Tauri's HTTP plugin fetch.
+ */
 async function tryRequest(
   model: string,
   apiKey: string,
   body: object,
   signal?: AbortSignal
 ): Promise<Response> {
-  const fetchFn = tauriFetch as unknown as typeof fetch;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
-  const response = await fetchFn(url, {
+  const requestInit: RequestInit = {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal,
-  });
+  };
+
+  // Try native window.fetch first (works better for SSE in Tauri v2 webviews)
+  if (typeof window !== "undefined" && window.fetch) {
+    try {
+      const response = await window.fetch(url, requestInit);
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text.substring(0, 200)}` : ""}`);
+      }
+      return response;
+    } catch (err: any) {
+      // If it's a network error (not HTTP error), try tauriFetch as fallback
+      if (err?.name === "TypeError" || err?.message?.includes("fetch") || err?.message?.includes("NetworkError")) {
+        console.log("[managed-ai] window.fetch failed, trying tauriFetch fallback:", err.message);
+        // Fall through to tauriFetch
+      } else {
+        throw err; // Re-throw HTTP errors etc.
+      }
+    }
+  }
+
+  // Fallback: Tauri HTTP plugin fetch
+  const fetchFn = tauriFetch as unknown as typeof fetch;
+  const response = await fetchFn(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  } as any);
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text}` : ""}`);
+    throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text.substring(0, 200)}` : ""}`);
   }
 
   return response;
@@ -179,12 +209,14 @@ export async function* fetchManagedAIResponse(
   // Current user content
   const userParts: any[] = [{ text: userMessage }];
   for (const img of imagesBase64) {
-    userParts.push({
-      inline_data: {
-        mime_type: "image/png",
-        data: img
-      }
-    });
+    if (img) {
+      userParts.push({
+        inline_data: {
+          mime_type: "image/png",
+          data: img
+        }
+      });
+    }
   }
   contents.push({
     role: "user",
@@ -220,6 +252,7 @@ export async function* fetchManagedAIResponse(
       break;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      console.error("[managed-ai] Key attempt failed:", lastError.message.substring(0, 100));
       continue;
     }
   }
@@ -239,7 +272,8 @@ export async function* fetchManagedAIResponse(
       return;
     }
 
-    yield "I'm having trouble connecting to the AI service right now. Please check your network or try again later.";
+    const errMsg = lastError?.message || "Unknown error";
+    yield `I'm having trouble connecting to the AI service (${errMsg.substring(0, 100)}). Check your network or try again later.`;
     return;
   }
 
@@ -291,7 +325,8 @@ export async function* fetchManagedAIResponse(
     }
   } catch (streamErr) {
     if (signal?.aborted) return;
-    yield "The connection was interrupted while generating a response. Please try again.";
+    const msg = streamErr instanceof Error ? streamErr.message : String(streamErr);
+    yield `The connection was interrupted while generating. ${msg.substring(0, 80)}`;
     return;
   }
 
